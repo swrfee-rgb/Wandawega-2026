@@ -32,7 +32,7 @@
   a:hover { text-decoration: underline; }
 
   /* FULL-SCREEN VIDEO BACKGROUND — uses dynamic viewport so it covers
-     the whole phone screen even when the address bar is showing */
+     the whole phone screen even when the iOS address bar is showing */
   .video-bg {
     position: fixed;
     top: 0; left: 0;
@@ -43,14 +43,16 @@
     pointer-events: none;
   }
   .video-bg video {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 100%; min-height: 100%;
-    width: auto; height: auto;
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
     object-fit: cover;
     display: block;
   }
+
+  /* Force in-flow elements above the fixed video — without this, the
+     positioned .video-bg paints over static hero/main siblings. */
+  .hero { position: relative; }
+  main { position: relative; }
   /* Light dark wash — keep video bright while text still reads */
   .video-bg::after {
     content: "";
