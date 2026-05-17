@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<title>Wandawega 2026 Ping-Pong Tournament</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141821;
+    --panel-2: #1c2230;
+    --border: #2a3142;
+    --text: #e8ecf3;
+    --muted: #8a93a6;
+    --accent: #f6c54a;
+    --green: #4ade80;
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px; line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(180deg, #0b0d12 0%, rgba(11,13,18,0.92) 100%);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+  }
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  h1 { font-size: 18px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  h1 .accent { color: var(--accent); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.live { color: var(--green); border-color: rgba(74,222,128,0.3); }
+  .pill.live .dot { background: var(--green); box-shadow: 0 0 8px rgba(74,222,128,0.6); }
+  .pill.offline { color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .pill.offline .dot { background: var(--red); }
+  nav.tabs {
+    display: flex; gap: 4px; margin-top: 12px;
+    background: var(--panel); border-radius: 10px; padding: 4px;
+    border: 1px solid var(--border);
+  }
+  nav.tabs button {
+    flex: 1; padding: 9px 8px; border: 0; background: transparent;
+    color: var(--muted); font-size: 14px; font-weight: 600;
+    border-radius: 7px; cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  nav.tabs button.active { background: var(--panel-2); color: var(--text); }
+  main { padding: 16px; max-width: 720px; margin: 0 auto; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; margin-bottom: 14px;
+  }
+  .panel h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); margin: 0 0 10px; font-weight: 700;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px; text-align: center;
+  }
+  .stat .num { font-size: 22px; font-weight: 700; color: var(--accent); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 14px; }
+  .champion-banner {
+    background: linear-gradient(135deg, #f6c54a, #ffd76b);
+    color: #1a1408;
+    padding: 18px 16px; border-radius: 12px;
+    text-align: center;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 20px rgba(246,197,74,0.25);
+  }
+  .champion-banner .label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; }
+  .champion-banner .name { font-size: 26px; font-weight: 800; margin-top: 4px; letter-spacing: -0.02em; }
+  .round { margin-bottom: 16px; }
+  .round-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 8px; font-weight: 700;
+  }
+  .match {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px; margin-bottom: 8px;
+    display: grid; gap: 4px;
+  }
+  .slot {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; border-radius: 7px;
+    background: rgba(255,255,255,0.02);
+    font-size: 15px;
+    border: 1px solid transparent;
+    min-height: 38px;
+  }
+  .slot.winner { background: rgba(74,222,128,0.08); border-color: rgba(74,222,128,0.35); }
+  .slot.winner .nm { color: var(--green); font-weight: 700; }
+  .slot.loser .nm { color: var(--muted); text-decoration: line-through; opacity: 0.7; }
+  .slot.bye { color: var(--muted); font-style: italic; font-size: 13px; }
+  .slot.pending .nm { color: var(--muted); font-style: italic; }
+  .slot .nm { font-weight: 600; }
+  .slot .tap {
+    font-size: 11px; color: var(--muted); padding: 3px 8px;
+    border-radius: 999px; background: var(--panel);
+    border: 1px solid var(--border);
+  }
+  .slot button.pick {
+    appearance: none; border: 1px solid var(--accent);
+    background: var(--accent); color: #1a1408;
+    font-size: 12px; font-weight: 700; padding: 4px 10px;
+    border-radius: 999px; cursor: pointer;
+  }
+  .vs { text-align: center; color: var(--muted); font-size: 10px; letter-spacing: 0.1em; padding: 2px 0; }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); font-size: 16px; font-family: inherit;
+    outline: none;
+  }
+  input[type=text]:focus, input[type=password]:focus { border-color: var(--accent); }
+  button.primary, button.secondary, button.danger {
+    width: 100%; padding: 12px 16px; border-radius: 10px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    border: 1px solid transparent; font-family: inherit;
+    transition: opacity 0.15s, transform 0.05s;
+  }
+  button.primary { background: var(--accent); color: #1a1408; }
+  button.secondary { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+  button.danger { background: transparent; color: var(--red); border-color: rgba(239,68,68,0.35); }
+  button.primary:active, button.secondary:active, button.danger:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .mt { margin-top: 10px; }
+  .player-list { display: flex; flex-direction: column; gap: 6px; }
+  .player-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px;
+  }
+  .player-row .x {
+    appearance: none; background: transparent; border: 0;
+    color: var(--muted); font-size: 18px; cursor: pointer;
+    padding: 0 6px; line-height: 1;
+  }
+  .player-row .x:hover { color: var(--red); }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 16px; border-radius: 999px;
+    font-size: 14px; box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .toast.error { border-color: rgba(239,68,68,0.5); color: var(--red); }
+  .help { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+  .config-warn {
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35);
+    color: #fecaca; padding: 12px; border-radius: 10px; margin-bottom: 14px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .config-warn b { color: #fef2f2; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 90%; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <h1>Wandawega <span class="accent">2026</span> Ping-Pong</h1>
+    <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="active" data-tab="bracket">Bracket</button>
+    <button data-tab="signup">Sign Up</button>
+    <button data-tab="admin">Admin</button>
+  </nav>
+</header>
+
+<main>
+  <div id="config-warn" class="config-warn" hidden>
+    <b>Database not connected yet.</b> Paste your Firebase config block between the <code>FIREBASE_CONFIG_START</code> / <code>FIREBASE_CONFIG_END</code> markers in <code>index.html</code> and reload.
+  </div>
+
+  <section id="tab-bracket">
+    <div id="champion-banner-mount"></div>
+    <div class="panel">
+      <h2>Tournament</h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="num" id="stat-players">0</div><div class="lbl">Players</div></div>
+        <div class="stat"><div class="num" id="stat-round">—</div><div class="lbl">Round</div></div>
+        <div class="stat"><div class="num" id="stat-remaining">0</div><div class="lbl">Matches Left</div></div>
+      </div>
+    </div>
+    <div id="bracket-mount"></div>
+  </section>
+
+  <section id="tab-signup" hidden>
+    <div class="panel">
+      <h2>Sign Up</h2>
+      <div id="signup-open">
+        <input id="signup-name" type="text" placeholder="Your name" maxlength="40" autocomplete="off">
+        <button class="primary mt" id="signup-btn">Add me</button>
+        <div class="help">Anyone with this link can sign up. Sign-ups close automatically once the bracket is generated.</div>
+      </div>
+      <div id="signup-closed" hidden class="empty">
+        Sign-ups are closed. The bracket has been generated.
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Players (<span id="signup-count">0</span>)</h2>
+      <div id="signup-list" class="player-list"></div>
+    </div>
+  </section>
+
+  <section id="tab-admin" hidden>
+    <div id="admin-locked" class="panel">
+      <h2>Admin</h2>
+      <input id="admin-pass" type="password" placeholder="Passcode" autocomplete="off">
+      <button class="primary mt" id="admin-unlock">Unlock</button>
+      <div class="help">Default passcode is <code>pingpong2026</code>. Change it in Settings once unlocked.</div>
+    </div>
+
+    <div id="admin-panel" hidden>
+      <div class="panel">
+        <h2>Bracket Control</h2>
+        <button class="primary" id="admin-gen">Generate bracket</button>
+        <button class="danger mt" id="admin-reset">Reset bracket (keep players)</button>
+        <div class="help">Generating shuffles the player list and closes sign-ups. Reset clears matches but keeps the players.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Players (<span id="admin-count">0</span>)</h2>
+        <div id="admin-list" class="player-list"></div>
+        <button class="danger mt" id="admin-clear">Clear all players</button>
+      </div>
+
+      <div class="panel">
+        <h2>Settings</h2>
+        <input id="admin-newpass" type="password" placeholder="New passcode (min 4 chars)" autocomplete="new-password">
+        <button class="secondary mt" id="admin-savepass">Change passcode</button>
+        <button class="secondary mt" id="admin-lock">Lock admin</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+  // FIREBASE_CONFIG_START
+  // Replace the placeholder values below with the config from Firebase Console
+  // → Project settings → Your apps → Web app → Config.
+  const FIREBASE_CONFIG = {
+    apiKey: "PASTE_API_KEY_HERE",
+    authDomain: "PASTE_AUTH_DOMAIN_HERE",
+    databaseURL: "PASTE_DATABASE_URL_HERE",
+    projectId: "PASTE_PROJECT_ID_HERE",
+    storageBucket: "PASTE_STORAGE_BUCKET_HERE",
+    messagingSenderId: "PASTE_SENDER_ID_HERE",
+    appId: "PASTE_APP_ID_HERE"
+  };
+  // FIREBASE_CONFIG_END
+
+  const DEFAULT_PASSCODE = "pingpong2026";
+  const configured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
+  if (!configured) document.getElementById("config-warn").hidden = false;
+
+  let db = null;
+  if (configured) {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+  }
+
+  const tabBtns = document.querySelectorAll("nav.tabs button");
+  const sections = {
+    bracket: document.getElementById("tab-bracket"),
+    signup: document.getElementById("tab-signup"),
+    admin: document.getElementById("tab-admin")
+  };
+  tabBtns.forEach(b => b.addEventListener("click", () => {
+    tabBtns.forEach(x => x.classList.toggle("active", x === b));
+    Object.entries(sections).forEach(([k, el]) => el.hidden = (k !== b.dataset.tab));
+  }));
+
+  const toastEl = document.getElementById("toast");
+  let toastTimer = null;
+  function toast(msg, isError) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle("error", !!isError);
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+  }
+
+  if (!configured) {
+    document.querySelectorAll("button.primary, button.secondary, button.danger").forEach(b => b.disabled = true);
+    document.querySelectorAll("input").forEach(i => i.disabled = true);
+  } else {
+    initApp();
+  }
+
+  function initApp() {
+    const pill = document.getElementById("status-pill");
+    const statusText = document.getElementById("status-text");
+    db.ref(".info/connected").on("value", snap => {
+      const live = !!snap.val();
+      pill.classList.toggle("live", live);
+      pill.classList.toggle("offline", !live);
+      statusText.textContent = live ? "Live" : "Offline";
+    });
+
+    let state = { players: {}, bracket: null, passcode: DEFAULT_PASSCODE };
+    let adminUnlocked = false;
+
+    db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
+    db.ref("players").on("value", s => {
+      state.players = s.val() || {};
+      renderSignup(); renderAdminPlayers(); renderBracketStats();
+    });
+    db.ref("bracket").on("value", s => {
+      state.bracket = s.val() || null;
+      renderBracket(); renderBracketStats(); renderSignup();
+    });
+
+    const nameInput = document.getElementById("signup-name");
+    document.getElementById("signup-btn").addEventListener("click", signUp);
+    nameInput.addEventListener("keydown", e => { if (e.key === "Enter") signUp(); });
+
+    function signUp() {
+      const raw = (nameInput.value || "").trim();
+      if (!raw) return toast("Enter your name", true);
+      if (raw.length > 40) return toast("Name too long", true);
+      if (state.bracket) return toast("Sign-ups closed", true);
+      const lower = raw.toLowerCase();
+      db.ref("players").transaction(curr => {
+        curr = curr || {};
+        for (const k in curr) if ((curr[k].name || "").toLowerCase() === lower) return;
+        const id = "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
+        curr[id] = { name: raw, addedAt: firebase.database.ServerValue.TIMESTAMP };
+        return curr;
+      }, (err, committed) => {
+        if (err) return toast("Sign-up failed", true);
+        if (!committed) return toast("That name's already in", true);
+        nameInput.value = "";
+        toast("You're in — good luck!");
+      });
+    }
+
+    function renderSignup() {
+      const open = !state.bracket;
+      document.getElementById("signup-open").hidden = !open;
+      document.getElementById("signup-closed").hidden = open;
+      const list = document.getElementById("signup-list");
+      const players = playerArray();
+      document.getElementById("signup-count").textContent = players.length;
+      list.innerHTML = "";
+      if (!players.length) { list.innerHTML = '<div class="empty">No one signed up yet.</div>'; return; }
+      players.forEach(p => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+        row.innerHTML = `<span>${escapeHtml(p.name)}</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    const adminLocked = document.getElementById("admin-locked");
+    const adminPanel = document.getElementById("admin-panel");
+    document.getElementById("admin-unlock").addEventListener("click", () => {
+      const v = document.getElementById("admin-pass").value;
+      if (v === state.passcode) {
+        adminUnlocked = true;
+        adminLocked.hidden = true;
+        adminPanel.hidden = false;
+        document.getElementById("admin-pass").value = "";
+        renderAdminPlayers(); renderBracket();
+        toast("Admin unlocked");
+      } else {
+        toast("Wrong passcode", true);
+      }
+    });
+    document.getElementById("admin-pass").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("admin-unlock").click();
+    });
+    document.getElementById("admin-lock").addEventListener("click", () => {
+      adminUnlocked = false;
+      adminPanel.hidden = true;
+      adminLocked.hidden = false;
+      renderBracket();
+    });
+
+    document.getElementById("admin-gen").addEventListener("click", () => {
+      const players = playerArray();
+      if (players.length < 2) return toast("Need at least 2 players", true);
+      if (state.bracket && !confirm("A bracket already exists. Regenerate from the current player list?")) return;
+      const bracket = generateBracket(players);
+      db.ref("bracket").set(bracket).then(() => toast("Bracket generated"));
+    });
+    document.getElementById("admin-reset").addEventListener("click", () => {
+      if (!state.bracket) return toast("No bracket to reset", true);
+      if (!confirm("Reset the bracket? Players are kept, matches are cleared.")) return;
+      db.ref("bracket").remove().then(() => toast("Bracket reset"));
+    });
+    document.getElementById("admin-clear").addEventListener("click", () => {
+      if (!confirm("Remove ALL signed-up players? This can't be undone.")) return;
+      db.ref("players").remove().then(() => toast("Players cleared"));
+    });
+    document.getElementById("admin-savepass").addEventListener("click", () => {
+      const v = document.getElementById("admin-newpass").value.trim();
+      if (v.length < 4) return toast("Passcode too short", true);
+      db.ref("settings/passcode").set(v).then(() => {
+        document.getElementById("admin-newpass").value = "";
+        toast("Passcode changed");
+      });
+    });
+
+    function renderAdminPlayers() {
+      const list = document.getElementById("admin-list");
+      const players = playerArray();
+      document.getElementById("admin-count").textContent = players.length;
+      list.innerHTML = "";
+      if (!players.length) { list.innerHTML = '<div class="empty">No players yet.</div>'; return; }
+      players.forEach(p => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+        row.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="x" title="Remove">×</button>`;
+        row.querySelector("button").addEventListener("click", () => {
+          if (state.bracket) return toast("Can't remove — reset bracket first.", true);
+          if (!confirm(`Remove ${p.name}?`)) return;
+          db.ref("players/" + p.id).remove();
+        });
+        list.appendChild(row);
+      });
+    }
+
+    function renderBracketStats() {
+      document.getElementById("stat-players").textContent = playerArray().length;
+      const b = state.bracket;
+      if (!b || !b.rounds) {
+        document.getElementById("stat-round").textContent = "—";
+        document.getElementById("stat-remaining").textContent = "0";
+        return;
+      }
+      const rounds = b.rounds;
+      let activeRound = -1, remaining = 0;
+      for (let r = 0; r < rounds.length; r++) {
+        for (let m = 0; m < rounds[r].length; m++) {
+          const match = rounds[r][m];
+          if (!match.winnerId && match.p1Id && match.p2Id) {
+            if (activeRound === -1) activeRound = r;
+            remaining++;
+          }
+        }
+      }
+      const labels = roundLabels(rounds.length);
+      document.getElementById("stat-round").textContent =
+        b.champion ? "Done" : (activeRound >= 0 ? labels[activeRound] : "—");
+      document.getElementById("stat-remaining").textContent = remaining;
+    }
+
+    function renderBracket() {
+      const mount = document.getElementById("bracket-mount");
+      const champMount = document.getElementById("champion-banner-mount");
+      champMount.innerHTML = "";
+      const b = state.bracket;
+      if (!b || !b.rounds) {
+        mount.innerHTML = '<div class="panel"><div class="empty">No bracket yet.<br>An admin will generate it once everyone has signed up.</div></div>';
+        return;
+      }
+      if (b.champion && b.championName) {
+        champMount.innerHTML = `<div class="champion-banner"><div class="label">🏆 Champion</div><div class="name">${escapeHtml(b.championName)}</div></div>`;
+      }
+      const rounds = b.rounds;
+      const labels = roundLabels(rounds.length);
+      let html = "";
+      for (let r = 0; r < rounds.length; r++) {
+        html += `<div class="round"><div class="round-head"><span>${labels[r]}</span><span>${rounds[r].length} match${rounds[r].length === 1 ? "" : "es"}</span></div>`;
+        for (let m = 0; m < rounds[r].length; m++) html += matchHtml(rounds[r][m], r, m);
+        html += `</div>`;
+      }
+      mount.innerHTML = html;
+      mount.querySelectorAll("button.pick").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const r = +btn.dataset.r, m = +btn.dataset.m, slot = btn.dataset.slot;
+          recordWinner(r, m, slot);
+        });
+      });
+    }
+
+    function matchHtml(match, r, m) {
+      const winnerId = match.winnerId;
+      const slotHtml = (id, name, slotKey) => {
+        if (!id) return `<div class="slot bye"><span class="nm">— bye —</span></div>`;
+        const isWinner = winnerId === id;
+        const isLoser = winnerId && winnerId !== id;
+        const cls = isWinner ? "winner" : (isLoser ? "loser" : "pending");
+        const canPick = adminUnlocked && !winnerId && match.p1Id && match.p2Id;
+        const tail = canPick
+          ? `<button class="pick" data-r="${r}" data-m="${m}" data-slot="${slotKey}">Winner</button>`
+          : (isWinner ? `<span class="tap">Won</span>` : "");
+        return `<div class="slot ${cls}"><span class="nm">${escapeHtml(name || "TBD")}</span>${tail}</div>`;
+      };
+      return `<div class="match">${slotHtml(match.p1Id, match.p1, "p1")}<div class="vs">VS</div>${slotHtml(match.p2Id, match.p2, "p2")}</div>`;
+    }
+
+    function recordWinner(r, m, slot) {
+      const b = state.bracket;
+      if (!b || !b.rounds || !b.rounds[r] || !b.rounds[r][m]) return;
+      const match = b.rounds[r][m];
+      if (match.winnerId) return toast("Already decided", true);
+      if (!match.p1Id || !match.p2Id) return toast("Match isn't ready yet", true);
+      const winnerId = slot === "p1" ? match.p1Id : match.p2Id;
+      const winnerName = slot === "p1" ? match.p1 : match.p2;
+      const updates = {};
+      updates[`bracket/rounds/${r}/${m}/winnerId`] = winnerId;
+      updates[`bracket/rounds/${r}/${m}/winnerName`] = winnerName;
+      if (r + 1 < b.rounds.length) {
+        const nextMatchIdx = Math.floor(m / 2);
+        const nextSlot = (m % 2 === 0) ? "p1" : "p2";
+        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}`] = winnerName;
+        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Id`] = winnerId;
+      } else {
+        updates["bracket/champion"] = winnerId;
+        updates["bracket/championName"] = winnerName;
+      }
+      db.ref().update(updates).then(() => toast(winnerName + " advances"));
+    }
+
+    function playerArray() {
+      return Object.entries(state.players || {})
+        .map(([id, v]) => ({ id, name: v.name, addedAt: v.addedAt || 0 }))
+        .sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+    }
+  }
+
+  function escapeHtml(s) {
+    return (s == null ? "" : String(s))
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
+
+  function fisherYates(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function roundLabels(numRounds) {
+    const labels = [];
+    for (let i = 0; i < numRounds; i++) {
+      const fromEnd = numRounds - 1 - i;
+      if (fromEnd === 0) labels.push("Final");
+      else if (fromEnd === 1) labels.push("Semifinal");
+      else if (fromEnd === 2) labels.push("Quarterfinal");
+      else labels.push("Round " + (i + 1));
+    }
+    return labels;
+  }
+
+  function generateBracket(players) {
+    const shuffled = fisherYates(players);
+    const size = nextPow2(shuffled.length);
+    const numByes = size - shuffled.length;
+    const slots = new Array(size).fill(null);
+    let pi = 0;
+    for (let b = 0; b < numByes; b++) { slots[b * 2] = shuffled[pi++]; }
+    let slotIdx = numByes * 2;
+    while (pi < shuffled.length) slots[slotIdx++] = shuffled[pi++];
+
+    const numRounds = Math.log2(size);
+    const rounds = [];
+    const r0 = [];
+    for (let i = 0; i < size; i += 2) {
+      const a = slots[i], b = slots[i + 1];
+      r0.push({
+        p1: a ? a.name : null, p1Id: a ? a.id : null,
+        p2: b ? b.name : null, p2Id: b ? b.id : null,
+        winnerId: null, winnerName: null
+      });
+    }
+    rounds.push(r0);
+    let cnt = r0.length;
+    for (let r = 1; r < numRounds; r++) {
+      cnt = cnt / 2;
+      const arr = [];
+      for (let i = 0; i < cnt; i++) arr.push({ p1: null, p1Id: null, p2: null, p2Id: null, winnerId: null, winnerName: null });
+      rounds.push(arr);
+    }
+    for (let m = 0; m < r0.length; m++) {
+      const match = r0[m];
+      const onlyP1 = match.p1Id && !match.p2Id;
+      const onlyP2 = !match.p1Id && match.p2Id;
+      if (onlyP1 || onlyP2) {
+        const wId = onlyP1 ? match.p1Id : match.p2Id;
+        const wNm = onlyP1 ? match.p1 : match.p2;
+        match.winnerId = wId;
+        match.winnerName = wNm;
+        if (rounds.length > 1) {
+          const nextMatchIdx = Math.floor(m / 2);
+          const nextSlot = (m % 2 === 0) ? "p1" : "p2";
+          rounds[1][nextMatchIdx][nextSlot] = wNm;
+          rounds[1][nextMatchIdx][nextSlot + "Id"] = wId;
+        }
+      }
+    }
+    return {
+      rounds, champion: null, championName: null,
+      createdAt: firebase.database.ServerValue.TIMESTAMP
+    };
+  }
+</script>
+</body>
+</html>
