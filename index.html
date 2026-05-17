@@ -31,8 +31,9 @@
   a { color: var(--cyan); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* FULL-SCREEN HERO IMAGE — uses dynamic viewport so it covers the
-     whole phone screen even when the iOS address bar is showing */
+  /* FULL-SCREEN HERO VIDEO — uses dynamic viewport so it covers the
+     whole phone screen even when the iOS address bar is showing.
+     hero.jpg is the poster shown until the video buffers / on failure. */
   .video-bg {
     position: fixed;
     top: 0; left: 0;
@@ -41,7 +42,13 @@
     height: 100dvh;         /* dynamic viewport on modern mobile */
     overflow: hidden;
     pointer-events: none;
-    background: url("hero.jpg") center center / cover no-repeat;
+    background: #000 url("hero.jpg") center center / cover no-repeat;
+  }
+  .video-bg video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
   }
 
   /* Force in-flow elements above the fixed video — without this, the
@@ -389,7 +396,11 @@
 </head>
 <body>
 
-<div class="video-bg" aria-hidden="true"></div>
+<div class="video-bg" aria-hidden="true">
+  <video autoplay muted loop playsinline preload="auto" poster="hero.jpg">
+    <source src="hero.mp4" type="video/mp4">
+  </video>
+</div>
 
 <section class="hero">
   <div class="hero-row">
