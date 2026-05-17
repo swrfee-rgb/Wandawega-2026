@@ -47,6 +47,8 @@
     width: 100%; height: 100%;
     object-fit: cover;
     display: block;
+    transform: scale(1.2);          /* crops the baked-in black bars */
+    transform-origin: center center;
   }
 
   /* Force in-flow elements above the fixed video — without this, the
