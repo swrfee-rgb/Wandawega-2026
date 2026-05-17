@@ -31,8 +31,8 @@
   a { color: var(--cyan); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* FULL-SCREEN VIDEO BACKGROUND — uses dynamic viewport so it covers
-     the whole phone screen even when the iOS address bar is showing */
+  /* FULL-SCREEN HERO IMAGE — uses dynamic viewport so it covers the
+     whole phone screen even when the iOS address bar is showing */
   .video-bg {
     position: fixed;
     top: 0; left: 0;
@@ -41,14 +41,7 @@
     height: 100dvh;         /* dynamic viewport on modern mobile */
     overflow: hidden;
     pointer-events: none;
-  }
-  .video-bg video {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-    transform: scale(1.2);          /* crops the baked-in black bars */
-    transform-origin: center center;
+    background: url("hero.jpg") center center / cover no-repeat;
   }
 
   /* Force in-flow elements above the fixed video — without this, the
@@ -396,11 +389,7 @@
 </head>
 <body>
 
-<div class="video-bg" aria-hidden="true">
-  <video autoplay muted loop playsinline preload="metadata">
-    <source src="hero.mp4" type="video/mp4">
-  </video>
-</div>
+<div class="video-bg" aria-hidden="true"></div>
 
 <section class="hero">
   <div class="hero-row">
