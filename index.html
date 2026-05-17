@@ -111,7 +111,7 @@
   .slot.loser .nm { color: var(--muted); text-decoration: line-through; opacity: 0.7; }
   .slot.bye { color: var(--muted); font-style: italic; font-size: 13px; }
   .slot.pending .nm { color: var(--muted); font-style: italic; }
-  .slot .nm { font-weight: 600; }
+  .slot .nm { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .slot .tap {
     font-size: 11px; color: var(--muted); padding: 3px 8px;
     border-radius: 999px; background: var(--panel);
@@ -155,6 +155,34 @@
     padding: 0 6px; line-height: 1;
   }
   .player-row .x:hover { color: var(--red); }
+  .player-info, .slot-info {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0; flex: 1;
+  }
+  .player-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .avatar {
+    position: relative; overflow: hidden;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .avatar img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .avatar.sm { width: 26px; height: 26px; font-size: 10px; gap: 8px; }
+  .slot-info { gap: 8px; }
+  .avatar.lg {
+    width: 84px; height: 84px; font-size: 28px;
+    border-width: 3px;
+    margin: 0 auto 10px;
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.55);
+    color: #1a1408;
+  }
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
     background: var(--panel-2); border: 1px solid var(--border);
@@ -279,6 +307,139 @@
   // FIREBASE_CONFIG_END
 
   const DEFAULT_PASSCODE = "pingpong2026";
+
+  // Studio Gang people → portrait photo lookup. Regenerate by re-running
+  // /tmp/sg_parser.py against an updated copy of https://studiogang.com/people/
+  const PEOPLE_PHOTOS = {
+    "aj rosales": "https://studiogang.com/wp-content/uploads/6036-gp-aj-rosales-web-e1739822813838-296x237.jpg",
+    "alan huang": "https://studiogang.com/wp-content/uploads/5272-gp-alan-huang-portrait-e1739822884687-296x237.jpg",
+    "alex girovich": "https://studiogang.com/wp-content/uploads/5188-gp-alex-girovich-web-210x280.jpg",
+    "alfred klopper": "https://studiogang.com/wp-content/uploads/5797-gp-alfred-klopper-web-e1739822937110-210x263.jpg",
+    "alissa anderson": "https://studiogang.com/wp-content/uploads/Alissa-Anderson_web-1-210x263.jpg",
+    "amy lawlor": "https://studiogang.com/wp-content/uploads/Amy-Lawlor_web-296x237.jpg",
+    "ana fernandez moraleda": "https://studiogang.com/wp-content/uploads/Ana-Fernandez-Moraleda_web-e1761770267386-210x263.jpg",
+    "ana flor": "https://studiogang.com/wp-content/uploads/20240604_Leadership_Portraits_006_cLyndon-French-210x263.jpg",
+    "ana maksin": "https://studiogang.com/wp-content/uploads/5077-gp-ana-maksin-web-210x280.jpg",
+    "ana sotelo": "https://studiogang.com/wp-content/uploads/Ana-Sotelo_web-210x263.jpg",
+    "andi altenbach": "https://studiogang.com/wp-content/uploads/4265-gp-andi-a-296x222.jpg",
+    "andrea rovetta": "https://studiogang.com/wp-content/uploads/4362-gp-andrea-rovetta-296x222.jpg",
+    "angela peckham": "https://studiogang.com/wp-content/uploads/4385-gp-angela-peckham-296x222.jpg",
+    "anika schwarzwald": "https://studiogang.com/wp-content/uploads/Anika-Schwarzwald_web-1-e1761770329116-210x263.jpg",
+    "anissa le scornet": "https://studiogang.com/wp-content/uploads/5566-gp-anissalescornet-web-296x222.jpg",
+    "anne-virginie sala": "https://studiogang.com/wp-content/uploads/3911-gp-2019-11-01-anne-virginie-updated-web-1-210x280.jpg",
+    "aria griffin": "https://studiogang.com/wp-content/uploads/5095-gp-aria-griffin-web-210x280.jpg",
+    "arthur liu": "https://studiogang.com/wp-content/uploads/Arthur-Liu_web-1-296x237.jpg",
+    "arty vartanyan": "https://studiogang.com/wp-content/uploads/Arty-Vartanyan_Portrait_web-296x237.jpg",
+    "aurelien tsemo": "https://studiogang.com/wp-content/uploads/1172-gp-aurelien-tsemo-210x280.jpg",
+    "austin chod": "https://studiogang.com/wp-content/uploads/5496-gp-austin-chod-web-210x280.jpg",
+    "austin sun": "https://studiogang.com/wp-content/uploads/Austin-Sun_web-210x263.jpg",
+    "bella adekoya": "https://studiogang.com/wp-content/uploads/5441-gp-bella-adekoya-web-296x222.jpg",
+    "bethany mahre": "https://studiogang.com/wp-content/uploads/Bethany-Mahre_web-210x263.jpg",
+    "bonny yau": "https://studiogang.com/wp-content/uploads/Bonny-Yau_web-e1757099826240-296x237.jpg",
+    "brandon townsend": "https://studiogang.com/wp-content/uploads/Brandon-Townsend_web-296x237.jpg",
+    "brian hartman": "https://studiogang.com/wp-content/uploads/Brian-Hartman-web-210x263.jpg",
+    "bryan scheib": "https://studiogang.com/wp-content/uploads/Bryan-Scheib_web-210x263.jpg",
+    "caleb fisher": "https://studiogang.com/wp-content/uploads/Caleb-Fisher_web-210x263.jpg",
+    "cara connelly gilbert": "https://studiogang.com/wp-content/uploads/Cara-Gilbert_Web-210x263.jpg",
+    "caroline acheatel": "https://studiogang.com/wp-content/uploads/5437-gp-caroline-acheatel-web-210x280.jpg",
+    "carolyn brunsen junk": "https://studiogang.com/wp-content/uploads/5229-gp-carolyn-brunsen-portrait-e1758565830164-296x237.jpg",
+    "cassie dickson": "https://studiogang.com/wp-content/uploads/5397-gp-cassie-dickson-portrait-210x280.jpg",
+    "charles curran": "https://studiogang.com/wp-content/uploads/5755-gp-charles-curran-web-210x280.jpg",
+    "chris bennett": "https://studiogang.com/wp-content/uploads/4280-gp-chris-bennett-210x280.jpg",
+    "claire cahan": "https://studiogang.com/wp-content/uploads/Claire-Cahan_web-2-210x263.jpg",
+    "colleen lyell": "https://studiogang.com/wp-content/uploads/5729-gp-colleen-lyell-web-210x280.jpg",
+    "corbin keech": "https://studiogang.com/wp-content/uploads/1223-gp-corbin-keech-296x222.jpg",
+    "courtney arabea": "https://studiogang.com/wp-content/uploads/5289-gp-courtney-arabea-portrait-210x280.jpg",
+    "danny graham": "https://studiogang.com/wp-content/uploads/4341-gp-danny-graham-210x279.jpg",
+    "david swain": "https://studiogang.com/wp-content/uploads/5422-gp-david-swain-portrait-210x280.jpg",
+    "davis butner": "https://studiogang.com/wp-content/uploads/5676-gp-davisbutner-web-210x280.jpg",
+    "diana aguilar": "https://studiogang.com/wp-content/uploads/4284-gp-diana-a-210x280.jpg",
+    "dylan king": "https://studiogang.com/wp-content/uploads/5642-gp-dylanking-portrait3-210x280.jpg",
+    "efi orfanou": "https://studiogang.com/wp-content/uploads/Efi-Orfanou_web-296x237.jpg",
+    "enrique orts costa": "https://studiogang.com/wp-content/uploads/5112-gp-enrique-orts-costa-portrait-296x222.jpg",
+    "eric zuckerman": "https://studiogang.com/wp-content/uploads/5516-gp-eric-zuckerman-web2-210x280.jpg",
+    "evan wermers": "https://studiogang.com/wp-content/uploads/4358-gp-img-5091-210x280.jpg",
+    "florencia kratsman": "https://studiogang.com/wp-content/uploads/Florencia-Kratsman_web-1-210x263.jpg",
+    "francesca johanson": "https://studiogang.com/wp-content/uploads/Francesca-Johanson_web-1-296x237.jpg",
+    "gregg garmisa": "https://studiogang.com/wp-content/uploads/5803-gp-gregg-garmisa-web-210x280.jpg",
+    "haoxiang yang": "https://studiogang.com/wp-content/uploads/5745-gp-haoxiang-yang-web-update-210x280.jpg",
+    "jason flores": "https://studiogang.com/wp-content/uploads/4347-gp-jason-flores-210x280.jpg",
+    "jay hoffman": "https://studiogang.com/wp-content/uploads/4987-gp-jay-hoffman-portrait-296x222.jpg",
+    "jeanne gang": "https://studiogang.com/wp-content/uploads/3631-gp-jeanne-gang-2017-c-studio-gang-e1738079639613-296x237.jpg",
+    "jeff jang": "https://studiogang.com/wp-content/uploads/6021-gp-jeff-jang-web-296x215.jpeg",
+    "jemma liu": "https://studiogang.com/wp-content/uploads/Jemma-Liu_web-210x263.jpg",
+    "jennifer simon": "https://studiogang.com/wp-content/uploads/5420-gp-jennifer-simon-portrait-e1758565930669-210x263.jpg",
+    "jill mediatore": "https://studiogang.com/wp-content/uploads/5727-gp-jill-mediatore-web-e1757099745462-210x262.jpg",
+    "jing chen-joyeux": "https://studiogang.com/wp-content/uploads/5102-gp-jing-chen-portrait-e1738079560747-210x264.jpg",
+    "joan verbon": "https://studiogang.com/wp-content/uploads/Joan-Verbon_web-296x237.jpg",
+    "joe burns": "https://studiogang.com/wp-content/uploads/Joe-Burns_web-296x237.jpg",
+    "john paul rysavy": "https://studiogang.com/wp-content/uploads/JP-Rysavy_web-210x263.jpg",
+    "jonathan chamblee": "https://studiogang.com/wp-content/uploads/Jonathan-Chamblee_web-210x263.jpg",
+    "jonathan izen": "https://studiogang.com/wp-content/uploads/2533-gp-jonathan-izen-alt-e1738079496321-210x263.jpg",
+    "josh ellman": "https://studiogang.com/wp-content/uploads/2822-gp-josh-ellman-296x222.jpg",
+    "julcsi futo": "https://studiogang.com/wp-content/uploads/Julcsi-Futo_web-210x263.jpg",
+    "julia roberts": "https://studiogang.com/wp-content/uploads/3782-gp-preferred-20190808-julia-roberts-portrait-8-e1757100834186-210x263.jpg",
+    "juliane wolf": "https://studiogang.com/wp-content/uploads/4357-gp-juliane-wolf-e1738079673632-296x237.jpg",
+    "julio alberto cedano": "https://studiogang.com/wp-content/uploads/5349-gp-julio-cedano-portrait-e1757100778321-210x263.jpg",
+    "kariane jeaurond": "https://studiogang.com/wp-content/uploads/Kariane-Jeaurond_web-1-e1739821548580-210x263.jpg",
+    "karina encarnacion": "https://studiogang.com/wp-content/uploads/Karina-Encarnacion_web-210x263.jpg",
+    "kristina eldrenkamp": "https://studiogang.com/wp-content/uploads/4299-gp-kristina-e-e1757100742395-210x262.jpg",
+    "lara kaufman": "https://studiogang.com/wp-content/uploads/4300-gp-lara-kaufman-210x280.jpg",
+    "laura ettedgui": "https://studiogang.com/wp-content/uploads/4301-gp-laura-ettedgui-e1757100704749-296x231.jpg",
+    "laura haak": "https://studiogang.com/wp-content/uploads/5370-gp-laura-haak-portrait-e1757100651809-210x262.jpg",
+    "leia gorra": "https://studiogang.com/wp-content/uploads/5262-gp-leia-gorra-portrait-studio-gang-web2-296x222.jpg",
+    "liao he": "https://studiogang.com/wp-content/uploads/5751-gp-liao-he-web-296x222.jpg",
+    "lindsey lasiewicz": "https://studiogang.com/wp-content/uploads/6041-gp-lindsey-lasiewicz-web-e1758565884756-296x237.jpg",
+    "lingyi tseng": "https://studiogang.com/wp-content/uploads/5684-gp-lingyitseng-web-e1757100608922-296x237.jpg",
+    "liza myroshnychenko": "https://studiogang.com/wp-content/uploads/5261-gp-liza-myroshnychenko-portrait-scaled-e1757100553489-210x263.jpg",
+    "luis medina": "https://studiogang.com/wp-content/uploads/5226-gp-luis-medina-web-e1757100518397-210x262.jpg",
+    "luis tejeda": "https://studiogang.com/wp-content/uploads/3907-gp-2019-11-01-luis-tejeda-updated-web-1-296x222.jpg",
+    "lydia link": "https://studiogang.com/wp-content/uploads/6033-gp-lydia-link-web-296x215.jpeg",
+    "mae smith": "https://studiogang.com/wp-content/uploads/5747-gp-mae-smith-web-e1757100474425-210x262.jpg",
+    "magda wala": "https://studiogang.com/wp-content/uploads/4393-gp-magda-wala-e1757100432781-210x263.jpg",
+    "mark schendel": "https://studiogang.com/wp-content/uploads/4323-gp-mark-schendel-e1738079791678-210x262.jpg",
+    "mark wilkins": "https://studiogang.com/wp-content/uploads/Mark-Wilkins_web-210x263.jpg",
+    "marylynn antaki": "https://studiogang.com/wp-content/uploads/5288-gp-marylynn-antaki-web-e1757100392569-296x237.jpg",
+    "mauricio sanchez": "https://studiogang.com/wp-content/uploads/4304-gp-mauricio-sanchez-e1757100347735-210x263.jpg",
+    "meghan jones": "https://studiogang.com/wp-content/uploads/Meghan-Jones_web-210x263.jpg",
+    "micheal nham": "https://studiogang.com/wp-content/uploads/3489-gp-micheal-nham-e1757100291794-210x263.jpg",
+    "molly kinsella": "https://studiogang.com/wp-content/uploads/3574-gp-mollykinsella-web-e1739556052957-210x262.jpg",
+    "neha harish": "https://studiogang.com/wp-content/uploads/Neha-Harish_Web-296x237.jpg",
+    "ola kusznerko": "https://studiogang.com/wp-content/uploads/5225-gp-ola-kusznerko-web-scaled-e1737212732912-210x263.jpg",
+    "patricia duenas gerritsen": "https://studiogang.com/wp-content/uploads/5682-gp-patriciaduenasgerritsen-web2-e1737212786554-210x263.jpg",
+    "paul aanonsen": "https://studiogang.com/wp-content/uploads/1771-gp-paulaanonsen-alt-296x222.jpg",
+    "philipp farana": "https://studiogang.com/wp-content/uploads/Philipp-Farana_web-296x237.jpg",
+    "rhea partisala": "https://studiogang.com/wp-content/uploads/5723-gp-rhea-partisala-web-296x222.jpg",
+    "riley cowing": "https://studiogang.com/wp-content/uploads/Riley-Cowing_web-1-296x237.jpg",
+    "rodia valladares": "https://studiogang.com/wp-content/uploads/4332-gp-rodia-valladares-e1738079844203-296x237.jpg",
+    "sangwon kim": "https://studiogang.com/wp-content/uploads/6043-gp-sangwon-kim-web-296x215.jpg",
+    "sarah athena beauchamp evdokias": "https://studiogang.com/wp-content/uploads/5165-gp-sarah-athena-beauchamp-evdokias-web-e1757100233989-210x263.jpg",
+    "schuyler smith": "https://studiogang.com/wp-content/uploads/Schuyler-Smith_web-296x237.jpg",
+    "seanna walsh": "https://studiogang.com/wp-content/uploads/4326-gp-sga-5732-296x222.jpg",
+    "shunfan zheng": "https://studiogang.com/wp-content/uploads/5494-gp-shunfan-zheng-portrait-1-296x222.jpg",
+    "shuping liu": "https://studiogang.com/wp-content/uploads/Shuping-Liu_web-210x263.jpg",
+    "sok-man cheung": "https://studiogang.com/wp-content/uploads/5337-gp-sokman-cheung-web-e1758565981929-210x262.jpg",
+    "steve wiesenthal": "https://studiogang.com/wp-content/uploads/4266-gp-steve-wiesenthal-210x280.jpg",
+    "steven meyer": "https://studiogang.com/wp-content/uploads/6039-gp-steven-meyer-web-210x280.jpg",
+    "teo quintana": "https://studiogang.com/wp-content/uploads/4316-gp-teo-quintana-e1757100186194-210x262.jpg",
+    "terrence chew": "https://studiogang.com/wp-content/uploads/5490-gp-terrence-chew-web-e1757100143608-210x263.jpg",
+    "thorsten johann": "https://studiogang.com/wp-content/uploads/4264-gp-thorsten-johann-210x280.jpg",
+    "tim gersten": "https://studiogang.com/wp-content/uploads/5733-gp-tim-gersten-web-e1757099910596-296x237.jpg",
+    "todd hogan": "https://studiogang.com/wp-content/uploads/Todd-Hogan_Web-296x237.jpg",
+    "tristan schendel": "https://studiogang.com/wp-content/uploads/Tristan-Schendel_Web-296x237.jpg",
+    "vincent bizot": "https://studiogang.com/wp-content/uploads/Vincent-Bizot_web-210x262.jpg",
+    "violante piccolomini": "https://studiogang.com/wp-content/uploads/Violante-Piccolomini_web-210x263.jpg",
+    "vitor oliveira": "https://studiogang.com/wp-content/uploads/5426-gp-vitor-oliveira-portrait-296x222.jpg",
+    "weiju juju lai": "https://studiogang.com/wp-content/uploads/1229-gp-weiju-lai-296x222.jpg",
+    "wen zhou": "https://studiogang.com/wp-content/uploads/5743-gp-wen-zhou-web-e1757100096205-210x263.jpg",
+    "weston walker": "https://studiogang.com/wp-content/uploads/4263-gp-weston-walker-2019-e1738079746920-210x262.jpg",
+    "will hansen": "https://studiogang.com/wp-content/uploads/5664-gp-williamhansen-web-296x222.jpg",
+    "william emmick": "https://studiogang.com/wp-content/uploads/1148-gp-william-emmick-296x222.jpg",
+    "zandra neely": "https://studiogang.com/wp-content/uploads/4361-gp-zandra-neely-210x280.jpg",
+    "zihao wei": "https://studiogang.com/wp-content/uploads/Zihao-Wei_web-210x263.jpg",
+    "zoe small": "https://studiogang.com/wp-content/uploads/Zoe-Small_web-210x263.jpg"
+  };
+
   const configured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
   if (!configured) document.getElementById("config-warn").hidden = false;
 
@@ -375,7 +536,7 @@
       players.forEach(p => {
         const row = document.createElement("div");
         row.className = "player-row";
-        row.innerHTML = `<span>${escapeHtml(p.name)}</span>`;
+        row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div>`;
         list.appendChild(row);
       });
     }
@@ -439,7 +600,7 @@
       players.forEach(p => {
         const row = document.createElement("div");
         row.className = "player-row";
-        row.innerHTML = `<span>${escapeHtml(p.name)}</span><button class="x" title="Remove">×</button>`;
+        row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
         row.querySelector("button").addEventListener("click", () => {
           if (state.bracket) return toast("Can't remove — reset bracket first.", true);
           if (!confirm(`Remove ${p.name}?`)) return;
@@ -484,7 +645,7 @@
         return;
       }
       if (b.champion && b.championName) {
-        champMount.innerHTML = `<div class="champion-banner"><div class="label">🏆 Champion</div><div class="name">${escapeHtml(b.championName)}</div></div>`;
+        champMount.innerHTML = `<div class="champion-banner">${avatarHtml(b.championName, "lg")}<div class="label">🏆 Champion</div><div class="name">${escapeHtml(b.championName)}</div></div>`;
       }
       const rounds = b.rounds;
       const labels = roundLabels(rounds.length);
@@ -514,7 +675,7 @@
         const tail = canPick
           ? `<button class="pick" data-r="${r}" data-m="${m}" data-slot="${slotKey}">Winner</button>`
           : (isWinner ? `<span class="tap">Won</span>` : "");
-        return `<div class="slot ${cls}"><span class="nm">${escapeHtml(name || "TBD")}</span>${tail}</div>`;
+        return `<div class="slot ${cls}"><div class="slot-info">${avatarHtml(name, "sm")}<span class="nm">${escapeHtml(name || "TBD")}</span></div>${tail}</div>`;
       };
       return `<div class="match">${slotHtml(match.p1Id, match.p1, "p1")}<div class="vs">VS</div>${slotHtml(match.p2Id, match.p2, "p2")}</div>`;
     }
@@ -553,6 +714,42 @@
     return (s == null ? "" : String(s))
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function normalizeName(s) {
+    return (s || "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[‘’“”"'`]/g, "")
+      .replace(/[^a-z\s\-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  function tokenize(s) { return s.split(/[\s\-]+/).filter(t => t.length >= 2); }
+  function findPhoto(name) {
+    const norm = normalizeName(name);
+    if (!norm) return null;
+    if (PEOPLE_PHOTOS[norm]) return PEOPLE_PHOTOS[norm];
+    const inputTokens = tokenize(norm);
+    if (!inputTokens.length) return null;
+    const matches = [];
+    for (const key in PEOPLE_PHOTOS) {
+      const keyTokens = tokenize(key);
+      if (inputTokens.every(it => keyTokens.includes(it))) matches.push(key);
+    }
+    return matches.length === 1 ? PEOPLE_PHOTOS[matches[0]] : null;
+  }
+  function initials(name) {
+    const parts = (name || "").split(/\s+/).filter(Boolean);
+    return (parts[0] ? parts[0][0] : "?").toUpperCase() + (parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() : "");
+  }
+  function avatarHtml(name, sizeClass) {
+    const cls = "avatar" + (sizeClass ? " " + sizeClass : "");
+    const ini = escapeHtml(initials(name));
+    const url = findPhoto(name);
+    if (!url) return `<div class="${cls}">${ini}</div>`;
+    return `<div class="${cls}">${ini}<img src="${escapeHtml(url)}" alt="" onerror="this.remove()" loading="lazy"></div>`;
   }
 
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
