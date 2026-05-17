@@ -19,7 +19,7 @@
     --winner: #0a7a3b;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  html, body { margin: 0; padding: 0; background: #000; color: var(--text); }
   body {
     font-family: "Helvetica Neue", Helvetica, "Arial Nova", Arial, sans-serif;
     font-size: 15px; line-height: 1.42;
@@ -30,61 +30,74 @@
   a { color: var(--cyan); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* HERO */
-  .hero {
-    padding: 24px 24px 28px;
-    border-bottom: 1px solid var(--line);
+  /* FULL-SCREEN VIDEO BACKGROUND */
+  .video-bg {
+    position: fixed; inset: 0; z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
   }
-  .hero-row {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 16px; margin-bottom: 24px;
-  }
-  .brand {
-    margin: 0;
-    font-size: 32px; font-weight: 300;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .brand .accent { color: var(--cyan); }
-  .brand-sub {
-    font-size: 11px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.16em;
-    font-weight: 500;
-    margin-top: 10px;
-  }
-  .pill {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--muted); white-space: nowrap;
-    padding-top: 4px;
-  }
-  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-  .pill.live { color: var(--winner); }
-  .pill.live .dot { background: var(--winner); }
-  .pill.offline { color: var(--warn); }
-  .pill.offline .dot { background: var(--warn); }
-
-  .hero-video {
-    width: 100%; max-width: 320px; margin: 0 auto;
-    aspect-ratio: 9 / 16;
-    background: #000;
-    position: relative; overflow: hidden;
-  }
-  .hero-video video {
+  .video-bg video {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover;
     display: block;
   }
+  /* Subtle vignette so brand text reads at top, tab edges feel grounded */
+  .video-bg::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.25) 100%);
+    pointer-events: none;
+  }
 
-  /* TABS — Studio Gang subsubnavi style */
+  /* HERO — sits directly over the video, no background */
+  .hero {
+    padding: 32px 24px 36px;
+    color: white;
+  }
+  .hero-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    margin: 0;
+    font-size: 36px; font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: white;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  }
+  .brand .accent { color: var(--cyan); }
+  .brand-sub {
+    font-size: 11px; color: rgba(255,255,255,0.9);
+    text-transform: uppercase; letter-spacing: 0.16em;
+    font-weight: 500;
+    margin-top: 10px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.4);
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(255,255,255,0.9); white-space: nowrap;
+    padding-top: 4px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.7); box-shadow: 0 0 6px rgba(0,0,0,0.3); }
+  .pill.live { color: #7af0b0; }
+  .pill.live .dot { background: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,0.7); }
+  .pill.offline { color: #ff8a8a; }
+  .pill.offline .dot { background: #ef4444; }
+
+  /* TABS — translucent so video peeks through */
   nav.tabs {
     display: flex; gap: 28px;
     padding: 0 24px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid rgba(229,229,229,0.5);
     position: sticky; top: 0; z-index: 10;
-    background: var(--bg);
+    background: rgba(255,255,255,0.85);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
   }
   nav.tabs button {
     appearance: none; background: none; border: 0;
@@ -105,6 +118,10 @@
   main {
     max-width: 720px; margin: 0 auto;
     padding: 28px 24px 48px;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
+    min-height: 100vh;
   }
 
   .panel { margin-bottom: 36px; }
@@ -355,6 +372,12 @@
 </head>
 <body>
 
+<div class="video-bg" aria-hidden="true">
+  <video autoplay muted loop playsinline preload="metadata">
+    <source src="hero.mp4" type="video/mp4">
+  </video>
+</div>
+
 <section class="hero">
   <div class="hero-row">
     <div>
@@ -362,11 +385,6 @@
       <div class="brand-sub">Ping-Pong Tournament</div>
     </div>
     <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
-  </div>
-  <div class="hero-video">
-    <video autoplay muted loop playsinline preload="metadata">
-      <source src="hero.mp4" type="video/mp4">
-    </video>
   </div>
 </section>
 
