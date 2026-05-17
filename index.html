@@ -19,7 +19,8 @@
     --winner: #0a7a3b;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #000; color: var(--text); }
+  html { background: #000; }
+  body { margin: 0; padding: 0; color: var(--text); background: transparent; }
   body {
     font-family: "Helvetica Neue", Helvetica, "Arial Nova", Arial, sans-serif;
     font-size: 15px; line-height: 1.42;
@@ -30,9 +31,9 @@
   a { color: var(--cyan); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* FULL-SCREEN VIDEO BACKGROUND */
+  /* FULL-SCREEN VIDEO BACKGROUND — no z-index so it sits below later DOM siblings */
   .video-bg {
-    position: fixed; inset: 0; z-index: -1;
+    position: fixed; inset: 0;
     overflow: hidden;
     pointer-events: none;
   }
