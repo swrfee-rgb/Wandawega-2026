@@ -164,13 +164,19 @@
     min-height: 60vh;
   }
 
+  /* LIQUID GLASS — translucent white with strong blur,
+     top-edge inner highlight, and soft outer shadow */
   .panel {
-    background: rgba(0, 0, 0, 0.1);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 20px 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 22px;
+    padding: 22px 20px;
     margin-bottom: 16px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.35),
+      0 8px 32px rgba(0,0,0,0.18);
   }
   .panel h2,
   h2 {
@@ -184,11 +190,16 @@
   /* STATS */
   .stat-grid {
     display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 1px; background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.12);
+    gap: 1px; background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
   }
   .stat {
-    background: rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(180%);
     padding: 18px 12px;
     text-align: center;
   }
@@ -212,11 +223,16 @@
 
   /* CHAMPION */
   .champion-banner {
-    background: var(--cyan);
+    background: linear-gradient(135deg, var(--cyan) 0%, rgba(42, 214, 238, 0.78) 100%);
     color: #ffffff;
     padding: 32px 20px;
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.5),
+      0 8px 32px rgba(15, 191, 217, 0.35);
   }
   .champion-banner .label {
     font-size: 10px; font-weight: 500;
@@ -242,13 +258,17 @@
     text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
   .match {
-    background: rgba(0, 0, 0, 0.1);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    border: 1px solid rgba(255,255,255,0.14);
-    padding: 6px 14px;
-    margin-bottom: 8px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 16px;
+    padding: 8px 16px;
+    margin-bottom: 10px;
     display: grid; gap: 2px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.25),
+      0 4px 16px rgba(0,0,0,0.12);
   }
   .slot {
     display: flex; align-items: center; justify-content: space-between;
@@ -269,13 +289,20 @@
     text-transform: uppercase; letter-spacing: 0.14em; font-weight: 500;
   }
   .slot button.pick {
-    appearance: none; background: var(--cyan); color: white;
-    border: 0; padding: 6px 14px;
+    appearance: none;
+    background: linear-gradient(180deg, var(--cyan), var(--cyan-dark));
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    padding: 6px 14px;
     font-size: 10px; font-weight: 500;
     letter-spacing: 0.14em; text-transform: uppercase;
     cursor: pointer; font-family: inherit;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      0 2px 8px rgba(15, 191, 217, 0.4);
   }
-  .slot button.pick:hover { background: var(--cyan-dark); }
+  .slot button.pick:hover { filter: brightness(1.1); }
   .vs {
     text-align: left; color: var(--muted);
     font-size: 9px; letter-spacing: 0.2em;
@@ -283,15 +310,19 @@
     padding: 0;
   }
 
-  /* INPUTS */
+  /* INPUTS — glass pills */
   input[type=text], input[type=password] {
-    width: 100%; padding: 14px 0;
-    background: transparent;
-    border: 0; border-bottom: 1px solid var(--line-2);
+    width: 100%; padding: 14px 18px;
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 999px;
     color: var(--text); font-size: 16px;
     font-family: inherit;
-    outline: none; border-radius: 0;
-    transition: border-color 0.15s;
+    outline: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: border-color 0.15s, background 0.15s;
   }
   input[type=text]::placeholder,
   input[type=password]::placeholder {
@@ -299,32 +330,46 @@
   }
   input[type=text]:focus, input[type=password]:focus {
     border-color: var(--cyan);
+    background: rgba(255, 255, 255, 0.12);
   }
 
-  /* BUTTONS */
+  /* BUTTONS — pills with glass treatment on secondary/danger */
   button.primary, button.secondary, button.danger {
     width: 100%; padding: 14px 16px;
     font-size: 11px; font-weight: 500;
     letter-spacing: 0.16em; text-transform: uppercase;
     cursor: pointer; border: 1px solid transparent;
+    border-radius: 999px;
     font-family: inherit;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
   }
   button.primary {
-    background: var(--cyan); color: white;
-    border-color: var(--cyan);
+    background: linear-gradient(180deg, var(--cyan), var(--cyan-dark));
+    color: white;
+    border-color: rgba(255,255,255,0.3);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.4),
+      0 4px 14px rgba(15, 191, 217, 0.4);
   }
-  button.primary:hover { background: var(--cyan-dark); border-color: var(--cyan-dark); }
+  button.primary:hover { filter: brightness(1.08); }
   button.secondary {
-    background: transparent; color: var(--text);
-    border-color: var(--line-2);
+    background: rgba(255,255,255,0.08);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.25);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
   }
-  button.secondary:hover { border-color: var(--text); }
+  button.secondary:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.4); }
   button.danger {
-    background: transparent; color: var(--warn);
-    border-color: rgba(185, 28, 28, 0.3);
+    background: rgba(255, 100, 100, 0.1);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: var(--warn);
+    border-color: rgba(255, 138, 138, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
   }
-  button.danger:hover { border-color: var(--warn); }
+  button.danger:hover { background: rgba(255, 100, 100, 0.18); border-color: var(--warn); }
   button:disabled { opacity: 0.35; cursor: not-allowed; }
 
   .mt { margin-top: 12px; }
@@ -383,10 +428,15 @@
 
   /* CONFIG WARN */
   .config-warn {
-    background: #fef7e6; border: 1px solid #f6c54a;
+    background: rgba(254, 247, 230, 0.92);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid #f6c54a;
+    border-radius: 16px;
     color: #78471f; padding: 16px;
     margin-bottom: 28px;
     font-size: 13px; line-height: 1.5;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 16px rgba(0,0,0,0.08);
   }
   .config-warn b { display: block; margin-bottom: 4px; color: #5a330f; }
 
@@ -401,19 +451,25 @@
     border: 1px solid var(--line);
   }
 
-  /* TOAST */
+  /* TOAST — glass pill */
   .toast {
     position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-    background: rgba(20,20,20,0.95); color: white;
-    padding: 12px 20px;
+    background: rgba(20,20,20,0.7);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    color: white;
+    padding: 12px 22px;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
     font-size: 11px; font-weight: 500;
     letter-spacing: 0.14em; text-transform: uppercase;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3);
     opacity: 0; transition: opacity 0.2s, transform 0.2s;
     pointer-events: none; z-index: 100;
     white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
-  .toast.error { background: rgba(180, 40, 40, 0.95); }
+  .toast.error { background: rgba(180, 40, 40, 0.78); border-color: rgba(255,200,200,0.25); }
 
   @media (min-width: 640px) {
     .hero { padding: 36px 36px 40px; }
