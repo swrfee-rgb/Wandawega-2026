@@ -688,8 +688,44 @@
   .office-count { color: rgba(255,255,255,0.45); font-variant-numeric: tabular-nums; }
 
   /* RULES — numbered card per rule inside the Rules tab */
-  .rules { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
-  .rule { display: flex; gap: 14px; align-items: flex-start; }
+  /* RULES — expandable card per rule. Closed by default: just the
+     numbered headline shows. Click (or focus) to unfurl the detail. */
+  .rules { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .rule {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .rule[open] {
+    border-color: rgba(42, 214, 238, 0.45);
+    background: rgba(42, 214, 238, 0.06);
+  }
+  .rule > summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    cursor: pointer;
+    padding: 12px 44px 12px 14px;
+    position: relative;
+    user-select: none;
+    list-style: none;
+  }
+  .rule > summary::-webkit-details-marker { display: none; }
+  .rule > summary::after {
+    content: "+";
+    position: absolute;
+    right: 16px; top: 50%;
+    transform: translateY(-50%);
+    width: 20px; height: 20px;
+    line-height: 20px; text-align: center;
+    font-size: 18px; font-weight: 400;
+    color: var(--cyan);
+    transition: transform 0.2s;
+  }
+  .rule[open] > summary::after { content: "−"; }
+  .rule > summary:hover { background: rgba(255,255,255,0.04); }
   .rule-num {
     flex: 0 0 auto;
     width: 28px; height: 28px; border-radius: 999px;
@@ -701,22 +737,25 @@
     text-shadow: 0 0 8px rgba(42, 214, 238, 0.45);
     margin-top: 1px;
   }
-  .rule-body { flex: 1; min-width: 0; }
   .rule-head {
+    flex: 1; min-width: 0;
     font-size: 14px; font-weight: 700;
     color: #ffffff;
-    margin-bottom: 4px;
+    line-height: 1.4;
+    padding-top: 4px;
     text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
-  .rule-body p {
-    margin: 0; padding: 0;
+  .rule-body {
+    padding: 0 16px 14px 56px;
     font-size: 14px; line-height: 1.55;
     color: rgba(255,255,255,0.86);
   }
+  .rule-body p { margin: 0; padding: 0; }
   .rule-body p + p { margin-top: 6px; }
   .rule-eg {
+    margin-top: 8px;
     font-size: 13px;
-    color: rgba(255,255,255,0.7) !important;
+    color: rgba(255,255,255,0.7);
     padding: 10px 12px;
     border-left: 2px solid rgba(42, 214, 238, 0.6);
     background: rgba(255,255,255,0.04);
@@ -1209,84 +1248,122 @@
     <div class="panel">
       <h2>Part 1 — Pre-selection</h2>
       <div class="rules">
-        <div class="rule">
-          <div class="rule-num">1</div>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">1</span>
+            <span class="rule-head">Sign up with your office.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Sign up with your office.</div>
+            <p>Anyone at Studio Gang can play. On the Sign-up tab, enter your name and pick the office you're representing.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">2</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">2</span>
+            <span class="rule-head">Two leagues from four offices.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Two leagues from four offices.</div>
+            <p>Once sign-ups close, the four offices are paired into two leagues. Each league is two offices joined as one — so the four offices line up as two-against-two for the entire tournament.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">3</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">3</span>
+            <span class="rule-head">1 big office + 1 small office = 1 league.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">SF and Paris always split across leagues.</div>
+            <p>The pairing is random, with one guardrail: each league joins one of the larger offices with one of the smaller ones. Pairing the two big offices together would leave the two small offices on the other side and the leagues lopsided, so we avoid it.</p>
+            <p>In practice today that means San Francisco and Paris (the smaller offices) always sit in opposite leagues, each paired with one of Chicago or New York.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">4</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">4</span>
+            <span class="rule-head">Eight players per league.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Eight players per league.</div>
+            <p>Each league fields exactly eight players at the tournament — sixteen total. The winning league earns the year's bragging rights for its two offices.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">5</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">5</span>
+            <span class="rule-head">Office quotas scale with sign-ups.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Office quotas scale with sign-ups.</div>
+            <p>Each office's share of its league's eight seats is proportional to how many of its people signed up.</p>
+            <p class="rule-eg"><em>Example:</em> Chicago signs up 10 and San Francisco signs up 5. Their joint league of 8 fills with 5 from Chicago and 3 from San Francisco.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">6</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">6</span>
+            <span class="rule-head">Gamemaster locks the roster by July 31, 2026.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Gamemaster locks the roster by July 31, 2026.</div>
+            <p>When an office has more sign-ups than its quota, the office's <em>gamemaster</em> picks who plays — through an office-wide sub-match, a lottery, or any other method they choose — and logs the final roster by <strong>July 31, 2026</strong>.</p>
           </div>
-        </div>
+        </details>
       </div>
     </div>
 
     <div class="panel">
       <h2>Part 2 — Match Day</h2>
       <div class="rules">
-        <div class="rule">
-          <div class="rule-num">1</div>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">1</span>
+            <span class="rule-head">Random doubles teams within each league.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Random doubles teams within each league.</div>
+            <p>At the tournament, each league's eight players are randomly paired into four doubles teams — eight teams total entering the bracket. You don't pick your partner; the bracket draws them.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">2</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">2</span>
+            <span class="rule-head">Single-elimination bracket.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Single-elimination bracket.</div>
+            <p>Win and move on, lose and you're out. Four matches in the quarterfinals, two in the semis, one final — straight to the trophy.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">3</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">3</span>
+            <span class="rule-head">Round 1 is always cross-league.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Round 1 is always cross-league.</div>
+            <p>The bracket is drawn so that <em>every quarterfinal</em> is one team from one league against a team from the other. Teams from the same league don't face each other in Round 1 — intra-league matchups only become possible from the semifinals onward.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">4</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">4</span>
+            <span class="rule-head">Best of 3, games to 11.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Best of 3, games to 11.</div>
+            <p>Every match is best-of-3 games. Each game goes to the first team to reach <strong>11 points</strong>, with a 2-point margin — at 10–10 you keep playing until one team leads by two.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">5</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">5</span>
+            <span class="rule-head">Serve switches every 2 points.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Serve switches every 2 points.</div>
+            <p>Olympic-style. The right to serve passes to the other team after every two points are played, regardless of who scored them. At 10–10 and beyond, the serve switches after every <em>single</em> point.</p>
           </div>
-        </div>
-        <div class="rule">
-          <div class="rule-num">6</div>
+        </details>
+        <details class="rule">
+          <summary>
+            <span class="rule-num">6</span>
+            <span class="rule-head">Champions take the trophy — and the league wins the year.</span>
+          </summary>
           <div class="rule-body">
-            <div class="rule-head">Champions take the trophy — and the league wins the year.</div>
+            <p>The team that wins the final lifts the trophy <em>and</em> brings their league the win for the year. Two offices share the bragging rights; one team gets the silverware.</p>
           </div>
-        </div>
+        </details>
       </div>
     </div>
   </section>
@@ -1308,10 +1385,10 @@
           </div>
         </details>
         <details class="faq-item">
-          <summary>Why are San Francisco and Paris always in different leagues?</summary>
+          <summary>Why is each league one big office + one small office?</summary>
           <div class="faq-body">
-            <p>It's not about those two offices specifically — it's about keeping the leagues evenly sized. We avoid pairing the two <em>smaller</em> offices in the same league, because that would force the two <em>larger</em> offices into the other one, making one side much deeper than the other.</p>
-            <p>Right now San Francisco and Paris are the two smaller offices, so they end up split across the leagues. The rest of the pairing is random.</p>
+            <p>It keeps the leagues evenly sized. If we paired the two big offices on one side, the two small offices would be stuck together on the other and the leagues would be lopsided. Pairing one big with one small keeps both leagues balanced.</p>
+            <p>Today the big offices are Chicago and New York; the small ones are San Francisco and Paris. So SF and Paris always sit in opposite leagues, each paired with one of the larger offices. Which of the two valid pairings is used is chosen at random.</p>
           </div>
         </details>
         <details class="faq-item">
