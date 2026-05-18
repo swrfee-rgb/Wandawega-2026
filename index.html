@@ -404,6 +404,18 @@
   .avatar.sm {
     width: 30px; height: 30px; font-size: 9px;
   }
+  /* Team = two avatars overlapped — doubles tournament UI */
+  .team-avatars {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+  }
+  .team-avatars .avatar + .avatar {
+    margin-left: -10px;
+    box-shadow: 0 0 0 1.5px rgba(20, 30, 40, 0.85);
+  }
+  .team-avatars.lg .avatar + .avatar {
+    margin-left: -20px;
+    box-shadow: 0 0 0 3px rgba(15, 191, 217, 0.95);
+  }
   .slot-info { gap: 12px; }
   .avatar.lg {
     width: 96px; height: 96px; font-size: 28px;
@@ -511,7 +523,7 @@
       <div id="signup-open">
         <input id="signup-name" type="text" placeholder="Your name" maxlength="40" autocomplete="off">
         <button class="primary mt" id="signup-btn">Add me</button>
-        <div class="help">Anyone with this link can sign up. Sign-ups close automatically once the bracket is generated.</div>
+        <div class="help">Sign up individually. Players are paired into random doubles teams when the bracket is generated. Sign-ups close automatically at that point.</div>
       </div>
       <div id="signup-closed" hidden class="empty">
         Sign-ups are closed. The bracket has been generated.
@@ -838,8 +850,9 @@
 
     document.getElementById("admin-gen").addEventListener("click", () => {
       const players = playerArray();
-      if (players.length < 2) return toast("Need at least 2 players", true);
-      if (state.bracket && !confirm("A bracket already exists. Regenerate from the current player list?")) return;
+      if (players.length < 4) return toast("Need at least 4 players (2 teams)", true);
+      if (players.length % 2 !== 0) return toast("Doubles needs an even player count", true);
+      if (state.bracket && !confirm("A bracket already exists. Regenerate with fresh random pairings?")) return;
       const bracket = generateBracket(players);
       db.ref("bracket").set(bracket).then(() => toast("Bracket generated"));
     });
@@ -893,7 +906,7 @@
       for (let r = 0; r < rounds.length; r++) {
         for (let m = 0; m < rounds[r].length; m++) {
           const match = rounds[r][m];
-          if (!match.winnerId && match.p1Id && match.p2Id) {
+          if (!match.winnerSlot && match.t1Ids && match.t2Ids) {
             if (activeRound === -1) activeRound = r;
             remaining++;
           }
@@ -914,8 +927,10 @@
         mount.innerHTML = '<div class="panel"><div class="empty">No bracket yet.<br>An admin will generate it once everyone has signed up.</div></div>';
         return;
       }
-      if (b.champion && b.championName) {
-        champMount.innerHTML = `<div class="champion-banner">${avatarHtml(b.championName, "lg")}<div class="label">🏆 Champion</div><div class="name">${escapeHtml(b.championName)}</div></div>`;
+      if (b.champion && b.championNames) {
+        const champTeam = (b.championNames || []).join(" & ");
+        const champAvatars = `<div class="team-avatars lg">${avatarHtml(b.championNames[0], "lg")}${avatarHtml(b.championNames[1], "lg")}</div>`;
+        champMount.innerHTML = `<div class="champion-banner">${champAvatars}<div class="label">🏆 Champions</div><div class="name">${escapeHtml(champTeam)}</div></div>`;
       }
       const rounds = b.rounds;
       const labels = roundLabels(rounds.length);
@@ -935,42 +950,46 @@
     }
 
     function matchHtml(match, r, m) {
-      const winnerId = match.winnerId;
-      const slotHtml = (id, name, slotKey) => {
-        if (!id) return `<div class="slot bye"><span class="nm">— bye —</span></div>`;
-        const isWinner = winnerId === id;
-        const isLoser = winnerId && winnerId !== id;
+      const winnerSlot = match.winnerSlot;
+      const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
+      const slotHtml = (names, ids, slotKey) => {
+        if (!teamReady(ids)) return `<div class="slot bye"><span class="nm">— bye —</span></div>`;
+        const isWinner = winnerSlot === slotKey;
+        const isLoser = winnerSlot && winnerSlot !== slotKey;
         const cls = isWinner ? "winner" : (isLoser ? "loser" : "pending");
-        const canPick = adminUnlocked && !winnerId && match.p1Id && match.p2Id;
+        const canPick = adminUnlocked && !winnerSlot && teamReady(match.t1Ids) && teamReady(match.t2Ids);
         const tail = canPick
           ? `<button class="pick" data-r="${r}" data-m="${m}" data-slot="${slotKey}">Winner</button>`
           : (isWinner ? `<span class="tap">Won</span>` : "");
-        return `<div class="slot ${cls}"><div class="slot-info">${avatarHtml(name, "sm")}<span class="nm">${escapeHtml(name || "TBD")}</span></div>${tail}</div>`;
+        const teamName = names.join(" & ");
+        const avatars = `<div class="team-avatars">${avatarHtml(names[0], "sm")}${avatarHtml(names[1], "sm")}</div>`;
+        return `<div class="slot ${cls}"><div class="slot-info">${avatars}<span class="nm">${escapeHtml(teamName)}</span></div>${tail}</div>`;
       };
-      return `<div class="match">${slotHtml(match.p1Id, match.p1, "p1")}<div class="vs">VS</div>${slotHtml(match.p2Id, match.p2, "p2")}</div>`;
+      return `<div class="match">${slotHtml(match.t1Names, match.t1Ids, "t1")}<div class="vs">VS</div>${slotHtml(match.t2Names, match.t2Ids, "t2")}</div>`;
     }
 
     function recordWinner(r, m, slot) {
+      // slot is "t1" or "t2"
       const b = state.bracket;
       if (!b || !b.rounds || !b.rounds[r] || !b.rounds[r][m]) return;
       const match = b.rounds[r][m];
-      if (match.winnerId) return toast("Already decided", true);
-      if (!match.p1Id || !match.p2Id) return toast("Match isn't ready yet", true);
-      const winnerId = slot === "p1" ? match.p1Id : match.p2Id;
-      const winnerName = slot === "p1" ? match.p1 : match.p2;
+      if (match.winnerSlot) return toast("Already decided", true);
+      const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
+      if (!teamReady(match.t1Ids) || !teamReady(match.t2Ids)) return toast("Match isn't ready yet", true);
+      const winnerNames = match[slot + "Names"];
+      const winnerIds = match[slot + "Ids"];
       const updates = {};
-      updates[`bracket/rounds/${r}/${m}/winnerId`] = winnerId;
-      updates[`bracket/rounds/${r}/${m}/winnerName`] = winnerName;
+      updates[`bracket/rounds/${r}/${m}/winnerSlot`] = slot;
       if (r + 1 < b.rounds.length) {
         const nextMatchIdx = Math.floor(m / 2);
-        const nextSlot = (m % 2 === 0) ? "p1" : "p2";
-        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}`] = winnerName;
-        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Id`] = winnerId;
+        const nextSlot = (m % 2 === 0) ? "t1" : "t2";
+        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Names`] = winnerNames;
+        updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Ids`] = winnerIds;
       } else {
-        updates["bracket/champion"] = winnerId;
-        updates["bracket/championName"] = winnerName;
+        updates["bracket/champion"] = winnerIds;
+        updates["bracket/championNames"] = winnerNames;
       }
-      db.ref().update(updates).then(() => toast(winnerName + " advances"));
+      db.ref().update(updates).then(() => toast(winnerNames.join(" & ") + " advance"));
     }
 
     function playerArray() {
@@ -1046,7 +1065,16 @@
   }
 
   function generateBracket(players) {
-    const shuffled = fisherYates(players);
+    // 1. Randomly pair players into doubles teams.
+    const shuffledPlayers = fisherYates(players);
+    const teams = [];
+    for (let i = 0; i + 1 < shuffledPlayers.length; i += 2) {
+      const a = shuffledPlayers[i], b = shuffledPlayers[i + 1];
+      teams.push({ ids: [a.id, b.id], names: [a.name, b.name] });
+    }
+
+    // 2. Shuffle teams so their bracket order is also random.
+    const shuffled = fisherYates(teams);
     const size = nextPow2(shuffled.length);
     const numByes = size - shuffled.length;
     const slots = new Array(size).fill(null);
@@ -1061,9 +1089,9 @@
     for (let i = 0; i < size; i += 2) {
       const a = slots[i], b = slots[i + 1];
       r0.push({
-        p1: a ? a.name : null, p1Id: a ? a.id : null,
-        p2: b ? b.name : null, p2Id: b ? b.id : null,
-        winnerId: null, winnerName: null
+        t1Names: a ? a.names : null, t1Ids: a ? a.ids : null,
+        t2Names: b ? b.names : null, t2Ids: b ? b.ids : null,
+        winnerSlot: null
       });
     }
     rounds.push(r0);
@@ -1071,28 +1099,26 @@
     for (let r = 1; r < numRounds; r++) {
       cnt = cnt / 2;
       const arr = [];
-      for (let i = 0; i < cnt; i++) arr.push({ p1: null, p1Id: null, p2: null, p2Id: null, winnerId: null, winnerName: null });
+      for (let i = 0; i < cnt; i++) arr.push({ t1Names: null, t1Ids: null, t2Names: null, t2Ids: null, winnerSlot: null });
       rounds.push(arr);
     }
+    // 3. Auto-advance any team that has a bye in round 0.
     for (let m = 0; m < r0.length; m++) {
       const match = r0[m];
-      const onlyP1 = match.p1Id && !match.p2Id;
-      const onlyP2 = !match.p1Id && match.p2Id;
-      if (onlyP1 || onlyP2) {
-        const wId = onlyP1 ? match.p1Id : match.p2Id;
-        const wNm = onlyP1 ? match.p1 : match.p2;
-        match.winnerId = wId;
-        match.winnerName = wNm;
+      const hasT1 = !!match.t1Ids, hasT2 = !!match.t2Ids;
+      if (hasT1 !== hasT2) {
+        const ws = hasT1 ? "t1" : "t2";
+        match.winnerSlot = ws;
         if (rounds.length > 1) {
           const nextMatchIdx = Math.floor(m / 2);
-          const nextSlot = (m % 2 === 0) ? "p1" : "p2";
-          rounds[1][nextMatchIdx][nextSlot] = wNm;
-          rounds[1][nextMatchIdx][nextSlot + "Id"] = wId;
+          const nextSlot = (m % 2 === 0) ? "t1" : "t2";
+          rounds[1][nextMatchIdx][nextSlot + "Names"] = match[ws + "Names"];
+          rounds[1][nextMatchIdx][nextSlot + "Ids"] = match[ws + "Ids"];
         }
       }
     }
     return {
-      rounds, champion: null, championName: null,
+      rounds, champion: null, championNames: null,
       createdAt: firebase.database.ServerValue.TIMESTAMP
     };
   }
