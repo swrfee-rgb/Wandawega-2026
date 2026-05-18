@@ -120,19 +120,30 @@
   .pill.offline { color: #ff8a8a; }
   .pill.offline .dot { background: #ef4444; }
 
-  /* TABS — almost fully transparent so video shows behind */
+  /* TABS — almost fully transparent so video shows behind.
+     3-column grid (1fr | auto | 1fr) so the Bracket tab in the
+     middle column is truly centered regardless of side-tab widths. */
   nav.tabs {
-    display: flex; gap: 28px;
-    padding: 0 24px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+    padding: 0 14px;
     border-bottom: 1px solid rgba(255,255,255,0.2);
     position: sticky; top: 0; z-index: 10;
     background: transparent;
   }
+  nav.tabs .tabs-side {
+    display: flex;
+    gap: 14px;
+    min-width: 0;
+  }
+  nav.tabs .tabs-left  { justify-content: flex-start; }
+  nav.tabs .tabs-right { justify-content: flex-end; }
   nav.tabs button {
     appearance: none; background: none; border: 0;
     padding: 16px 0; font-family: inherit;
     font-size: 11px; font-weight: 500;
-    letter-spacing: 0.16em; text-transform: uppercase;
+    letter-spacing: 0.12em; text-transform: uppercase;
     color: rgba(255,255,255,0.65); cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
@@ -145,7 +156,15 @@
     border-bottom-color: var(--cyan);
   }
   nav.tabs button:hover { color: #ffffff; }
-  nav.tabs button.tab-right { margin-left: auto; }
+  nav.tabs button.tab-main {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    padding: 16px 14px;
+  }
+  nav.tabs button.tab-main.active {
+    border-bottom-width: 3px;
+  }
 
   main {
     max-width: 720px; margin: 0 auto;
@@ -531,6 +550,54 @@
   }
   .rule-eg em { color: var(--cyan); font-style: normal; font-weight: 600; letter-spacing: 0.04em; }
 
+  /* FAQ — collapsible Q&A list using native <details>/<summary> */
+  .faq { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .faq-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .faq-item[open] {
+    border-color: rgba(42, 214, 238, 0.45);
+    background: rgba(42, 214, 238, 0.06);
+  }
+  .faq-item summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 44px 14px 16px;
+    position: relative;
+    font-size: 14px; font-weight: 600;
+    color: #ffffff;
+    line-height: 1.4;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    user-select: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after {
+    content: "+";
+    position: absolute;
+    right: 16px; top: 50%;
+    transform: translateY(-50%);
+    width: 20px; height: 20px;
+    line-height: 20px; text-align: center;
+    font-size: 18px; font-weight: 400;
+    color: var(--cyan);
+    transition: transform 0.2s;
+  }
+  .faq-item[open] summary::after {
+    content: "−";
+  }
+  .faq-item summary:hover { background: rgba(255,255,255,0.04); }
+  .faq-body {
+    padding: 0 16px 14px;
+    font-size: 14px; line-height: 1.55;
+    color: rgba(255,255,255,0.86);
+  }
+  .faq-body p { margin: 0; padding: 0; }
+  .faq-body p + p { margin-top: 8px; }
+
   /* LEAGUE TAB — two side-by-side league cards */
   .league-grid {
     display: grid;
@@ -831,7 +898,14 @@
     .brand-logo { max-width: 520px; }
     .hero-video { max-width: 360px; }
     main { padding: 36px 36px 64px; }
-    nav.tabs { padding: 0 36px; }
+    nav.tabs {
+      padding: 0 36px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    nav.tabs .tabs-side { gap: 28px; }
+    nav.tabs button { letter-spacing: 0.16em; }
+    nav.tabs button.tab-main { font-size: 16px; padding: 16px 20px; letter-spacing: 0.16em; }
   }
 </style>
 </head>
@@ -849,11 +923,16 @@
 </section>
 
 <nav class="tabs" role="tablist">
-  <button class="active" data-tab="bracket">Bracket</button>
-  <button data-tab="signup">Sign-up</button>
-  <button data-tab="league">League</button>
-  <button data-tab="rules">Rules</button>
-  <button data-tab="admin" class="tab-right">Admin</button>
+  <div class="tabs-side tabs-left">
+    <button data-tab="signup">Sign-up</button>
+    <button data-tab="league">League</button>
+  </div>
+  <button class="active tab-main" data-tab="bracket">Bracket</button>
+  <div class="tabs-side tabs-right">
+    <button data-tab="rules">Rules</button>
+    <button data-tab="faq">FAQ</button>
+    <button data-tab="admin">Admin</button>
+  </div>
 </nav>
 
 <main>
@@ -986,6 +1065,56 @@
             <p>When an office has more sign-ups than its quota, the office's <em>gamemaster</em> decides who plays — through an office-wide sub-match, a lottery, or any other method — and logs the final roster by <strong>July 31, 2026</strong>.</p>
           </div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-faq" hidden>
+    <div class="panel">
+      <h2>Frequently Asked</h2>
+      <div class="faq">
+        <details class="faq-item">
+          <summary>When and where is the tournament?</summary>
+          <div class="faq-body">
+            <p>The Doubles Ping-Pong Tournament is held at the Studio Gang summer retreat at Camp Wandawega in 2026. Exact dates are shared with all sign-ups closer to the event.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>How are doubles teams paired?</summary>
+          <div class="faq-body">
+            <p>Once sign-ups close, the four offices are split into two leagues — each league joins two offices as one. Players are then paired into random doubles teams within their league when the bracket is generated.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>What if my office has more sign-ups than spots?</summary>
+          <div class="faq-body">
+            <p>Each office's share of its league's eight seats is proportional to how many people signed up. If your office has more sign-ups than its quota, the office's <em>gamemaster</em> decides who plays — through an office-wide sub-match, a lottery, or any other method — and logs the final roster by July 31, 2026.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I pick my own doubles partner?</summary>
+          <div class="faq-body">
+            <p>No. Teams are formed by random pairing within each league when the bracket is generated. This keeps things fair and shakes up the matchups across offices.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Can I sign up after sign-ups close?</summary>
+          <div class="faq-body">
+            <p>Sign-ups close automatically the moment the bracket is generated. After that point, the Sign-up tab is locked. If you missed the window, talk to your office's gamemaster.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>What if I can't make it after signing up?</summary>
+          <div class="faq-body">
+            <p>Let your office's gamemaster know as early as possible so they can adjust the roster. Final rosters lock on July 31, 2026.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Are there equipment or dress-code requirements?</summary>
+          <div class="faq-body">
+            <p>Nope. Paddles and balls are provided at camp. Wear whatever you'd play in — though league-themed colors are always encouraged.</p>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -1305,7 +1434,8 @@
     signup: document.getElementById("tab-signup"),
     league: document.getElementById("tab-league"),
     admin: document.getElementById("tab-admin"),
-    rules: document.getElementById("tab-rules")
+    rules: document.getElementById("tab-rules"),
+    faq: document.getElementById("tab-faq")
   };
   tabBtns.forEach(b => b.addEventListener("click", () => {
     tabBtns.forEach(x => x.classList.toggle("active", x === b));
