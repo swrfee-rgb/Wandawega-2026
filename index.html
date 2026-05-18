@@ -144,6 +144,7 @@
     border-bottom-color: var(--cyan);
   }
   nav.tabs button:hover { color: #ffffff; }
+  nav.tabs button.tab-right { margin-left: auto; }
 
   main {
     max-width: 720px; margin: 0 auto;
@@ -492,6 +493,43 @@
   }
   .office-count { color: rgba(255,255,255,0.45); font-variant-numeric: tabular-nums; }
 
+  /* RULES — numbered card per rule inside the Rules tab */
+  .rules { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
+  .rule { display: flex; gap: 14px; align-items: flex-start; }
+  .rule-num {
+    flex: 0 0 auto;
+    width: 28px; height: 28px; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    color: var(--cyan);
+    background: rgba(42, 214, 238, 0.12);
+    border: 1px solid rgba(42, 214, 238, 0.5);
+    text-shadow: 0 0 8px rgba(42, 214, 238, 0.45);
+    margin-top: 1px;
+  }
+  .rule-body { flex: 1; min-width: 0; }
+  .rule-head {
+    font-size: 14px; font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .rule-body p {
+    margin: 0; padding: 0;
+    font-size: 14px; line-height: 1.55;
+    color: rgba(255,255,255,0.86);
+  }
+  .rule-body p + p { margin-top: 6px; }
+  .rule-eg {
+    font-size: 13px;
+    color: rgba(255,255,255,0.7) !important;
+    padding: 10px 12px;
+    border-left: 2px solid rgba(42, 214, 238, 0.6);
+    background: rgba(255,255,255,0.04);
+    border-radius: 0 10px 10px 0;
+  }
+  .rule-eg em { color: var(--cyan); font-style: normal; font-weight: 600; letter-spacing: 0.04em; }
+
   /* BUTTONS — pills with glass treatment on secondary/danger */
   button.primary, button.secondary, button.danger {
     width: 100%; padding: 14px 16px;
@@ -668,6 +706,7 @@
   <button class="active" data-tab="bracket">Bracket</button>
   <button data-tab="signup">Sign Up</button>
   <button data-tab="admin">Admin</button>
+  <button data-tab="rules" class="tab-right">Rules</button>
 </nav>
 
 <main>
@@ -743,6 +782,50 @@
         <input id="admin-newpass" type="password" placeholder="New passcode (min 4 chars)" autocomplete="new-password">
         <button class="secondary mt" id="admin-savepass">Change passcode</button>
         <button class="secondary mt" id="admin-lock">Lock admin</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-rules" hidden>
+    <div class="panel">
+      <h2>How It Works</h2>
+      <div class="rules">
+        <div class="rule">
+          <div class="rule-num">1</div>
+          <div class="rule-body">
+            <div class="rule-head">Sign up.</div>
+            <p>Every Studio Gang staffer can sign up with their name and the office they're playing for.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">2</div>
+          <div class="rule-body">
+            <div class="rule-head">Two leagues from four offices.</div>
+            <p>Once sign-ups close, the four offices are paired into two leagues — each league is two offices joined as one.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">3</div>
+          <div class="rule-body">
+            <div class="rule-head">Eight per league.</div>
+            <p>Each league sends eight players to Wandawega. The winning league earns the bragging rights — and honour — of its two offices.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">4</div>
+          <div class="rule-body">
+            <div class="rule-head">Proportional quotas.</div>
+            <p>Each office's share of its league's eight seats scales with how many of its people signed up.</p>
+            <p class="rule-eg"><em>Example:</em> Chicago signs up 10 and San Francisco signs up 5. Their joint league of 8 fills with 5 from Chicago and 3 from San Francisco.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">5</div>
+          <div class="rule-body">
+            <div class="rule-head">The gamemaster picks the roster.</div>
+            <p>Within each office, a coordinator known as the <em>gamemaster</em> chooses which of the sign-ups will actually travel to Wandawega.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1049,7 +1132,8 @@
   const sections = {
     bracket: document.getElementById("tab-bracket"),
     signup: document.getElementById("tab-signup"),
-    admin: document.getElementById("tab-admin")
+    admin: document.getElementById("tab-admin"),
+    rules: document.getElementById("tab-rules")
   };
   tabBtns.forEach(b => b.addEventListener("click", () => {
     tabBtns.forEach(x => x.classList.toggle("active", x === b));
