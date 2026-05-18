@@ -896,12 +896,12 @@
     function renderBracketStats() {
       document.getElementById("stat-players").textContent = playerArray().length;
       const b = state.bracket;
-      if (!b || !b.rounds) {
+      const rounds = roundsArray(b);
+      if (!rounds) {
         document.getElementById("stat-round").textContent = "—";
         document.getElementById("stat-remaining").textContent = "0";
         return;
       }
-      const rounds = b.rounds;
       let activeRound = -1, remaining = 0;
       for (let r = 0; r < rounds.length; r++) {
         for (let m = 0; m < rounds[r].length; m++) {
@@ -923,7 +923,8 @@
       const champMount = document.getElementById("champion-banner-mount");
       champMount.innerHTML = "";
       const b = state.bracket;
-      if (!b || !b.rounds) {
+      const rounds = roundsArray(b);
+      if (!rounds) {
         mount.innerHTML = '<div class="panel"><div class="empty">No bracket yet.<br>An admin will generate it once everyone has signed up.</div></div>';
         return;
       }
@@ -932,12 +933,11 @@
         const champAvatars = `<div class="team-avatars lg">${avatarHtml(b.championNames[0], "lg")}${avatarHtml(b.championNames[1], "lg")}</div>`;
         champMount.innerHTML = `<div class="champion-banner">${champAvatars}<div class="label">🏆 Champions</div><div class="name">${escapeHtml(champTeam)}</div></div>`;
       }
-      const rounds = b.rounds;
       const labels = roundLabels(rounds.length);
       let html = "";
       for (let r = 0; r < rounds.length; r++) {
         html += `<div class="round"><div class="round-head"><span>${labels[r]}</span><span>${rounds[r].length} match${rounds[r].length === 1 ? "" : "es"}</span></div>`;
-        for (let m = 0; m < rounds[r].length; m++) html += matchHtml(rounds[r][m], r, m);
+        for (let m = 0; m < rounds[r].length; m++) html += matchHtml(rounds[r][m], r, m, labels[r - 1]);
         html += `</div>`;
       }
       mount.innerHTML = html;
@@ -949,11 +949,18 @@
       });
     }
 
-    function matchHtml(match, r, m) {
+    function matchHtml(match, r, m, prevLabel) {
       const winnerSlot = match.winnerSlot;
       const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
+      const placeholder = (slotKey) => {
+        if (r === 0) return "— bye —";
+        const feederMatch = (slotKey === "t1" ? m * 2 : m * 2 + 1) + 1;
+        return `Winner of ${prevLabel || "previous round"} match ${feederMatch}`;
+      };
       const slotHtml = (names, ids, slotKey) => {
-        if (!teamReady(ids)) return `<div class="slot bye"><span class="nm">— bye —</span></div>`;
+        if (!teamReady(ids)) {
+          return `<div class="slot bye"><span class="nm">${placeholder(slotKey)}</span></div>`;
+        }
         const isWinner = winnerSlot === slotKey;
         const isLoser = winnerSlot && winnerSlot !== slotKey;
         const cls = isWinner ? "winner" : (isLoser ? "loser" : "pending");
@@ -971,25 +978,30 @@
     function recordWinner(r, m, slot) {
       // slot is "t1" or "t2"
       const b = state.bracket;
-      if (!b || !b.rounds || !b.rounds[r] || !b.rounds[r][m]) return;
-      const match = b.rounds[r][m];
+      const rounds = roundsArray(b);
+      if (!rounds || !rounds[r] || !rounds[r][m]) return;
+      const match = rounds[r][m];
       if (match.winnerSlot) return toast("Already decided", true);
       const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
       if (!teamReady(match.t1Ids) || !teamReady(match.t2Ids)) return toast("Match isn't ready yet", true);
       const winnerNames = match[slot + "Names"];
       const winnerIds = match[slot + "Ids"];
+      const total = bracketRoundCount(b);
       const updates = {};
       updates[`bracket/rounds/${r}/${m}/winnerSlot`] = slot;
-      if (r + 1 < b.rounds.length) {
+      if (r + 1 < total) {
         const nextMatchIdx = Math.floor(m / 2);
         const nextSlot = (m % 2 === 0) ? "t1" : "t2";
         updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Names`] = winnerNames;
         updates[`bracket/rounds/${r + 1}/${nextMatchIdx}/${nextSlot}Ids`] = winnerIds;
+        db.ref().update(updates).then(() =>
+          toast(winnerNames.join(" & ") + " advance to " + roundLabels(total)[r + 1]));
       } else {
         updates["bracket/champion"] = winnerIds;
         updates["bracket/championNames"] = winnerNames;
+        db.ref().update(updates).then(() =>
+          toast("🏆 " + winnerNames.join(" & ") + " are the champions"));
       }
-      db.ref().update(updates).then(() => toast(winnerNames.join(" & ") + " advance"));
     }
 
     function playerArray() {
@@ -1042,6 +1054,25 @@
   }
 
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
+
+  // Firebase sometimes returns arrays as objects (sparse keys etc.). These
+  // helpers normalize the bracket structure so the rest of the code can
+  // always treat rounds as a real array of arrays.
+  function asArray(x) {
+    if (!x) return [];
+    if (Array.isArray(x)) return x;
+    return Object.keys(x).sort((a, b) => +a - +b).map(k => x[k]);
+  }
+  function roundsArray(bracket) {
+    if (!bracket || !bracket.rounds) return null;
+    return asArray(bracket.rounds).map(r => asArray(r));
+  }
+  function bracketRoundCount(bracket) {
+    if (!bracket) return 0;
+    if (typeof bracket.roundCount === "number") return bracket.roundCount;
+    const rs = roundsArray(bracket);
+    return rs ? rs.length : 0;
+  }
 
   function fisherYates(arr) {
     const a = arr.slice();
@@ -1118,7 +1149,10 @@
       }
     }
     return {
-      rounds, champion: null, championNames: null,
+      rounds,
+      roundCount: numRounds,
+      champion: null,
+      championNames: null,
       createdAt: firebase.database.ServerValue.TIMESTAMP
     };
   }
