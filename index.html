@@ -122,13 +122,50 @@
       drop-shadow(0 0 3px rgba(0,0,0,0.6))
       drop-shadow(0 4px 24px rgba(0,0,0,0.55));
   }
-  .pill {
+  .hero-corner {
     position: absolute; top: 16px; right: 16px;
+    display: flex; align-items: center; gap: 10px;
+    z-index: 5;
+  }
+  .pill {
     display: inline-flex; align-items: center; gap: 7px;
     font-size: 10px; font-weight: 500;
     letter-spacing: 0.14em; text-transform: uppercase;
     color: rgba(255,255,255,0.9); white-space: nowrap;
     text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+  }
+  .admin-pill {
+    appearance: none;
+    background: rgba(255,255,255,0.08);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    backdrop-filter: blur(6px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.28);
+    border-radius: 999px;
+    padding: 5px 11px 5px 9px;
+    font-family: inherit;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 14px rgba(0,0,0,0.25);
+    text-shadow: 0 0 6px rgba(255,255,255,0.45);
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  }
+  .admin-pill .key {
+    font-size: 13px; line-height: 1; letter-spacing: 0;
+    text-shadow: none;
+  }
+  .admin-pill:hover {
+    background: rgba(255,255,255,0.16);
+    border-color: rgba(255,255,255,0.42);
+    transform: translateY(-1px);
+  }
+  .admin-pill.active {
+    background: rgba(42,214,238,0.22);
+    border-color: var(--cyan);
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(42,214,238,0.6);
   }
   .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.7); box-shadow: 0 0 6px rgba(0,0,0,0.3); }
   .pill.live { color: #7af0b0; }
@@ -956,7 +993,10 @@
 </div>
 
 <section class="hero">
-  <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
+  <div class="hero-corner">
+    <button class="admin-pill" data-tab="admin" aria-label="Admin"><span class="key">⚙</span><span class="lbl">Admin</span></button>
+    <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
+  </div>
   <img class="brand-logo" src="logo.png?v=20250518f" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
 </section>
 
@@ -969,7 +1009,6 @@
   <div class="tabs-side tabs-right">
     <button data-tab="rules">Rules</button>
     <button data-tab="faq">FAQ</button>
-    <button data-tab="admin">Admin</button>
   </div>
 </nav>
 
@@ -1480,7 +1519,9 @@
     db = firebase.database();
   }
 
-  const tabBtns = document.querySelectorAll("nav.tabs button");
+  // Tab buttons live in nav.tabs and also as the Admin pill in the hero
+  // corner; both have data-tab so this single selector catches them all.
+  const tabBtns = document.querySelectorAll("[data-tab]");
   const sections = {
     bracket: document.getElementById("tab-bracket"),
     signup: document.getElementById("tab-signup"),
