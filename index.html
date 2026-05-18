@@ -603,6 +603,79 @@
     .league-vs { padding: 2px 0; }
   }
 
+  /* LEAGUE ROSTER — admin picker + read-only roster grid inside each card */
+  .league-roster {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255,255,255,0.14);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .league-roster-status {
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    color: rgba(255,255,255,0.65);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .league-roster-status.complete { color: #6bf3a8; }
+  .roster-office { display: flex; flex-direction: column; gap: 5px; }
+  .roster-office-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.7);
+    padding: 0 2px 2px;
+  }
+  .roster-office-quota { color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  .roster-office-quota.full { color: var(--cyan); }
+  .roster-tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+  .roster-tile {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px 3px 3px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.14);
+    font-size: 12px; line-height: 1;
+    color: rgba(255,255,255,0.88);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .roster-tile .avatar { width: 22px; height: 22px; font-size: 8px; }
+  .roster-tile.selected {
+    background: rgba(42, 214, 238, 0.18);
+    border-color: rgba(42, 214, 238, 0.6);
+    color: #fff;
+  }
+  .league-b .roster-tile.selected {
+    background: rgba(255, 180, 90, 0.18);
+    border-color: rgba(255, 180, 90, 0.55);
+  }
+  .roster-tile.disabled {
+    opacity: 0.4; cursor: not-allowed;
+  }
+  .roster-final-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
+  }
+  .roster-final-tile {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px 6px 6px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    min-width: 0;
+  }
+  .roster-final-tile .avatar { width: 30px; height: 30px; font-size: 10px; flex: 0 0 auto; }
+  .roster-final-tile .name {
+    font-size: 12px; font-weight: 500;
+    color: #fff; line-height: 1.2;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .roster-empty {
+    font-size: 12px; color: rgba(255,255,255,0.5);
+    text-align: center; padding: 6px 0;
+  }
+
   /* BUTTONS — pills with glass treatment on secondary/danger */
   button.primary, button.secondary, button.danger {
     width: 100%; padding: 14px 16px;
@@ -1451,19 +1524,34 @@
     });
 
     document.getElementById("admin-gen").addEventListener("click", () => {
-      const players = playerArray();
-      if (players.length < 4) return toast("Need at least 4 players (2 teams)", true);
+      const allPlayers = playerArray();
+      if (allPlayers.length < 4) return toast("Need at least 4 players (2 teams)", true);
+      let players = allPlayers;
       if (state.leagues) {
+        const counts = {};
+        allPlayers.forEach(p => { if (p.office) counts[p.office] = (counts[p.office] || 0) + 1; });
         const o2l = officeToLeagueMap(state.leagues);
         const cnt = { A: 0, B: 0, none: 0 };
-        players.forEach(p => { cnt[o2l[p.office] || "none"]++; });
+        allPlayers.forEach(p => { cnt[o2l[p.office] || "none"]++; });
         if (cnt.A < 2 || cnt.B < 2) return toast("Each league needs at least 2 players", true);
-        const warn = [];
-        if (cnt.A % 2 !== 0) warn.push("1 player from League A will sit out");
-        if (cnt.B % 2 !== 0) warn.push("1 player from League B will sit out");
-        if (cnt.none > 0) warn.push(`${cnt.none} player(s) in offices outside any league will sit out`);
-        if (warn.length && !confirm(warn.join("\n") + "\n\nContinue?")) return;
-      } else if (players.length % 2 !== 0) {
+
+        if (bothRostersComplete(state.leagues, counts)) {
+          // Strict mode: use only the gamemaster-selected 8 per league.
+          const allowed = new Set();
+          for (const key of ["A", "B"]) {
+            for (const o of asArray(state.leagues[key].offices)) {
+              rosterIdsForOffice(state.leagues[key], o).forEach(id => allowed.add(id));
+            }
+          }
+          players = allPlayers.filter(p => allowed.has(p.id));
+        } else {
+          const warn = ["Rosters aren't complete yet. The bracket will use ALL signed-up league members instead of the chosen 8 per league."];
+          if (cnt.A % 2 !== 0) warn.push("• 1 player from " + leagueLabel(state.leagues.A) + " will sit out");
+          if (cnt.B % 2 !== 0) warn.push("• 1 player from " + leagueLabel(state.leagues.B) + " will sit out");
+          if (cnt.none > 0) warn.push(`• ${cnt.none} player(s) in offices outside any league will sit out`);
+          if (!confirm(warn.join("\n") + "\n\nContinue anyway?")) return;
+        }
+      } else if (allPlayers.length % 2 !== 0) {
         return toast("Doubles needs an even player count", true);
       }
       if (state.bracket && !confirm("A bracket already exists. Regenerate with fresh random pairings?")) return;
@@ -1525,8 +1613,94 @@
         return;
       }
 
+      const allPlayers = playerArray();
       const counts = {};
-      playerArray().forEach(p => { if (p.office) counts[p.office] = (counts[p.office] || 0) + 1; });
+      const playersByOffice = {};
+      const playerById = {};
+      allPlayers.forEach(p => {
+        if (p.office) {
+          counts[p.office] = (counts[p.office] || 0) + 1;
+          (playersByOffice[p.office] = playersByOffice[p.office] || []).push(p);
+        }
+        playerById[p.id] = p;
+      });
+
+      const rosterSection = (key, league) => {
+        const quotas = leagueQuotas(league, counts);
+        const targetTotal = quotas.reduce((s, q) => s + q.quota, 0);
+        const filled = leagueRosterTotal(league);
+        const complete = leagueRosterComplete(league, counts);
+
+        // Completed view: 8-player grid (or however many fit the quota).
+        if (complete) {
+          const tiles = [];
+          for (const q of quotas) {
+            for (const id of rosterIdsForOffice(league, q.office)) {
+              const p = playerById[id];
+              if (!p) continue;
+              tiles.push(`
+                <div class="roster-final-tile">
+                  ${avatarHtml(p.name)}
+                  <span class="name">${escapeHtml(p.name)}</span>
+                </div>`);
+            }
+          }
+          return `
+            <div class="league-roster">
+              <div class="league-roster-status complete">✓ Roster complete · ${filled} players</div>
+              <div class="roster-final-grid">${tiles.join("")}</div>
+            </div>`;
+        }
+
+        // Insufficient sign-ups to reach 8.
+        if (targetTotal < 8) {
+          const have = quotas.reduce((s, q) => s + q.count, 0);
+          return `
+            <div class="league-roster">
+              <div class="league-roster-status">Needs ${8 - have} more sign-up${8 - have === 1 ? "" : "s"} to fill 8 seats</div>
+            </div>`;
+        }
+
+        // In-progress / not started: show counts. If admin, show selectable tiles.
+        if (!adminUnlocked) {
+          return `
+            <div class="league-roster">
+              <div class="league-roster-status">Roster pending · ${filled} of 8 chosen</div>
+            </div>`;
+        }
+
+        const officeBlocks = quotas.map(q => {
+          const selectedIds = new Set(rosterIdsForOffice(league, q.office));
+          const officePlayers = (playersByOffice[q.office] || []).slice()
+            .sort((a, b) => a.name.localeCompare(b.name));
+          const atQuota = selectedIds.size >= q.quota;
+          const fullCls = atQuota ? " full" : "";
+          const tiles = officePlayers.map(p => {
+            const isSel = selectedIds.has(p.id);
+            const disabled = !isSel && atQuota;
+            const cls = "roster-tile" + (isSel ? " selected" : "") + (disabled ? " disabled" : "");
+            return `
+              <div class="${cls}" data-league="${key}" data-office="${escapeHtml(q.office)}" data-player="${escapeHtml(p.id)}" data-action="${disabled ? "none" : "toggle"}">
+                ${avatarHtml(p.name)}
+                <span>${escapeHtml(p.name)}</span>
+              </div>`;
+          }).join("");
+          return `
+            <div class="roster-office">
+              <div class="roster-office-head">
+                <span>${escapeHtml(q.office)}</span>
+                <span class="roster-office-quota${fullCls}">${selectedIds.size} / ${q.quota}</span>
+              </div>
+              <div class="roster-tiles">${tiles || '<div class="roster-empty">No sign-ups yet.</div>'}</div>
+            </div>`;
+        }).join("");
+
+        return `
+          <div class="league-roster">
+            <div class="league-roster-status">Choose ${targetTotal} players · ${filled} of ${targetTotal} chosen</div>
+            ${officeBlocks}
+          </div>`;
+      };
 
       const card = (key, league) => {
         const offices = asArray(league.offices);
@@ -1543,6 +1717,7 @@
               <span class="league-total">${total}<span class="league-total-lbl">${total === 1 ? "player" : "players"}</span></span>
             </div>
             <div class="league-offices">${officeRows}</div>
+            ${rosterSection(key, league)}
           </div>`;
       };
 
@@ -1552,6 +1727,34 @@
           <div class="league-vs">vs</div>
           ${card("B", leagues.B)}
         </div>`;
+
+      // Click delegation for the roster tiles.
+      mount.querySelectorAll('.roster-tile[data-action="toggle"]').forEach(el => {
+        el.addEventListener("click", () => {
+          toggleRosterPlayer(el.dataset.league, el.dataset.office, el.dataset.player);
+        });
+      });
+    }
+
+    function toggleRosterPlayer(leagueKey, office, playerId) {
+      if (!adminUnlocked) return;
+      const leagues = state.leagues;
+      if (!leagues || !leagues[leagueKey]) return;
+      const league = leagues[leagueKey];
+      const current = rosterIdsForOffice(league, office);
+      const isSelected = current.includes(playerId);
+
+      if (!isSelected) {
+        // Re-check quota against current state.
+        const counts = {};
+        playerArray().forEach(p => { if (p.office) counts[p.office] = (counts[p.office] || 0) + 1; });
+        const quotas = leagueQuotas(league, counts);
+        const q = quotas.find(x => x.office === office);
+        if (q && current.length >= q.quota) return toast("Office quota reached", true);
+      }
+
+      const next = isSelected ? current.filter(id => id !== playerId) : current.concat([playerId]);
+      db.ref(`leagues/${leagueKey}/roster/${office}`).set(next.length ? next : null);
     }
 
     function renderBracketStats() {
@@ -1762,6 +1965,49 @@
     if (leagues.A && leagues.A.offices) asArray(leagues.A.offices).forEach(o => m[o] = "A");
     if (leagues.B && leagues.B.offices) asArray(leagues.B.offices).forEach(o => m[o] = "B");
     return m;
+  }
+
+  // Compute the per-office quota for a league using the Hamilton / largest-
+  // remainder method so the proportional split always sums to exactly the
+  // target (8 when sign-ups allow it; the league total otherwise).
+  function leagueQuotas(league, counts) {
+    const offices = asArray(league.offices);
+    const total = offices.reduce((s, o) => s + (counts[o] || 0), 0);
+    const target = Math.min(8, total);
+    if (target === 0) return offices.map(o => ({ office: o, quota: 0, count: 0 }));
+    const raw = offices.map(o => {
+      const cnt = counts[o] || 0;
+      const exact = (cnt / total) * target;
+      return { office: o, count: cnt, exact, floor: Math.floor(exact), frac: exact - Math.floor(exact) };
+    });
+    let allocated = raw.reduce((s, r) => s + r.floor, 0);
+    const sorted = [...raw].sort((a, b) => b.frac - a.frac || (b.count - b.floor) - (a.count - a.floor));
+    let i = 0;
+    while (allocated < target && i < sorted.length * 4) {
+      const r = sorted[i % sorted.length];
+      if (r.floor < r.count) { r.floor++; allocated++; }
+      i++;
+    }
+    return raw.map(r => ({ office: r.office, quota: r.floor, count: r.count }));
+  }
+
+  function rosterIdsForOffice(league, office) {
+    return asArray(league && league.roster && league.roster[office]);
+  }
+  function leagueRosterTotal(league) {
+    if (!league || !league.roster) return 0;
+    return Object.values(league.roster).reduce((s, ids) => s + asArray(ids).length, 0);
+  }
+  function leagueRosterComplete(league, counts) {
+    const quotas = leagueQuotas(league, counts);
+    const totalQ = quotas.reduce((s, q) => s + q.quota, 0);
+    if (totalQ < 8) return false;
+    return quotas.every(q => rosterIdsForOffice(league, q.office).length === q.quota);
+  }
+  function bothRostersComplete(leagues, counts) {
+    return !!leagues && !!leagues.A && !!leagues.B &&
+      leagueRosterComplete(leagues.A, counts) &&
+      leagueRosterComplete(leagues.B, counts);
   }
 
   // Firebase sometimes returns arrays as objects (sparse keys etc.). These
