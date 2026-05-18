@@ -113,7 +113,13 @@
     width: 100%; max-width: 420px;
     height: auto;
     margin: 0 auto;
-    filter: drop-shadow(0 4px 24px rgba(0,0,0,0.55));
+    /* Layered drop-shadows: tight ones hug every letter and paddle edge
+       (so the white text reads against light parts of the video), the
+       wider one is the ambient shadow under the logo. */
+    filter:
+      drop-shadow(0 0 1.5px rgba(0,0,0,0.85))
+      drop-shadow(0 0 3px rgba(0,0,0,0.6))
+      drop-shadow(0 4px 24px rgba(0,0,0,0.55));
   }
   .pill {
     position: absolute; top: 16px; right: 16px;
@@ -151,13 +157,18 @@
   nav.tabs button {
     appearance: none; background: none; border: 0;
     padding: 16px 0; font-family: inherit;
-    font-size: 11px; font-weight: 500;
+    font-size: 11px; font-weight: 600;
     letter-spacing: 0.12em; text-transform: uppercase;
-    color: rgba(255,255,255,0.65); cursor: pointer;
+    color: rgba(255,255,255,0.85); cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     transition: color 0.15s;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    /* Layered shadows so the white tab text stays readable against
+       light areas of the hero video (sauna walls). */
+    text-shadow:
+      0 0 2px rgba(0,0,0,0.85),
+      0 1px 3px rgba(0,0,0,0.7),
+      0 2px 8px rgba(0,0,0,0.5);
     white-space: nowrap;
   }
   nav.tabs button.active {
