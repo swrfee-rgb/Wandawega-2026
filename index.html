@@ -45,6 +45,7 @@
     --muted: rgba(255, 255, 255, 0.65);
     --cyan: #2ad6ee;
     --cyan-dark: #18b3ca;
+    --navy: #183049;
     --warn: #ff8a8a;
     --winner: #6bf3a8;
   }
@@ -157,25 +158,24 @@
   nav.tabs button {
     appearance: none; background: none; border: 0;
     padding: 16px 0; font-family: inherit;
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 700;
     letter-spacing: 0.12em; text-transform: uppercase;
-    color: rgba(255,255,255,0.85); cursor: pointer;
+    color: var(--navy); cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     transition: color 0.15s;
-    /* Layered shadows so the white tab text stays readable against
-       light areas of the hero video (sauna walls). */
+    /* Light halo so the navy text still reads against darker video
+       frames (window frame, shadowed wood). */
     text-shadow:
-      0 0 2px rgba(0,0,0,0.85),
-      0 1px 3px rgba(0,0,0,0.7),
-      0 2px 8px rgba(0,0,0,0.5);
+      0 0 2px rgba(255,255,255,0.9),
+      0 0 6px rgba(255,255,255,0.7);
     white-space: nowrap;
   }
   nav.tabs button.active {
-    color: #ffffff;
+    color: var(--navy);
     border-bottom-color: var(--cyan);
   }
-  nav.tabs button:hover { color: #ffffff; }
+  nav.tabs button:hover { color: #000000; }
   nav.tabs button.tab-main {
     font-size: 14px;
     font-weight: 700;
