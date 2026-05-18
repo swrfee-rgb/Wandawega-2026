@@ -869,7 +869,7 @@
       <h2>Pair Leagues</h2>
       <button class="primary" id="league-randomize">Randomize pairing</button>
       <button class="danger mt" id="league-clear">Clear pairing</button>
-      <div class="help">Randomly pairs the four offices into two leagues. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
+      <div class="help">Randomly pairs the four offices into two leagues. Paris and San Francisco are kept in separate leagues. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
     </div>
   </section>
 
@@ -1430,7 +1430,13 @@
 
     document.getElementById("league-randomize").addEventListener("click", () => {
       if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
-      const shuffled = fisherYates(OFFICES.slice());
+      // Constraint: Paris and San Francisco must never share a league.
+      let shuffled;
+      for (let tries = 0; tries < 50; tries++) {
+        shuffled = fisherYates(OFFICES.slice());
+        const a = new Set(shuffled.slice(0, 2));
+        if (!(a.has("Paris") && a.has("San Francisco"))) break;
+      }
       const payload = {
         A: { offices: [shuffled[0], shuffled[1]] },
         B: { offices: [shuffled[2], shuffled[3]] },
