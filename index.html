@@ -263,14 +263,20 @@
   .tab-ball.no-transition { transition: opacity 0.25s ease-out; }
   .tab-ball-inner {
     position: absolute;
-    left: -7px; top: 0;            /* center the ball on the anchor */
-    width: 14px; height: 14px;
+    /* Size and offset are driven by --tab-ball-size (set in JS from the
+       rendered logo width × 0.0315 so it matches the PNG ball exactly). */
+    width: var(--tab-ball-size, 14px);
+    height: var(--tab-ball-size, 14px);
+    left: calc(var(--tab-ball-size, 14px) / -2);
+    top: 0;
     border-radius: 50%;
-    background: radial-gradient(circle at 32% 30%, #ffe48a 0%, #f5a623 60%, #c97808 100%);
-    box-shadow:
-      0 1px 3px rgba(0,0,0,0.4),
-      0 0 8px rgba(245,166,35,0.55),
-      0 0 14px rgba(245,166,35,0.25);
+    /* Match the flat illustration in the logo: solid orange #ffbf00
+       with a soft white highlight in the upper-left quadrant — no
+       3D gradient, no glow, no drop shadow. */
+    background:
+      radial-gradient(ellipse 46% 30% at 42% 30%,
+        #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 78%),
+      #ffbf00;
     transform-origin: center bottom;
   }
   /* Playful ping-pong bounce: quick rise, lingering apex, snappy fall,
@@ -315,12 +321,6 @@
     .tab-ball { transition: opacity 0.2s; }
     .tab-ball.positioned .tab-ball-inner { animation: none; }
     .tab-ball.launching { animation: none; }
-  }
-  @media (min-width: 640px) {
-    .tab-ball-inner {
-      left: -8px;
-      width: 17px; height: 17px;
-    }
   }
   nav.tabs button:hover {
     color: #ffffff;
@@ -1659,14 +1659,29 @@
     return { x: btnRect.left + btnRect.width / 2 - navRect.left, y: 0 };
   }
 
+  // Match the bouncy ball's CSS size to the orange ball painted in the
+  // logo (diameter = 3.15% of logo width). Called on load and on resize
+  // so the two stay locked together at any viewport.
+  function syncTabBallSize() {
+    if (!logoWrap || !tabBall) return 14;
+    const w = logoWrap.getBoundingClientRect().width;
+    const size = w * 0.0315;
+    tabBall.style.setProperty("--tab-ball-size", `${size}px`);
+    return size;
+  }
+
   function titleBallPos() {
     if (!logoWrap || !tabsNav) return null;
     const navRect = tabsNav.getBoundingClientRect();
     const logoRect = logoWrap.getBoundingClientRect();
-    // Orange ball lives at 42.74% across, 10.32% down the logo image.
+    const ballSize = syncTabBallSize();
+    // Painted ball is at (42.74%, 10.32%) of the logo. The tab-ball's
+    // rendered center sits at (.tab-ball top of 5px + transform.y +
+    // inner top of 0 + ballSize/2), so subtract those offsets from
+    // the title's nav-relative Y to get the transform we need.
     return {
       x: logoRect.left + logoRect.width  * 0.4274 - navRect.left,
-      y: logoRect.top  + logoRect.height * 0.1032 - navRect.top - 5,
+      y: logoRect.top  + logoRect.height * 0.1032 - navRect.top - 5 - ballSize / 2,
     };
   }
 
@@ -1733,15 +1748,18 @@
   // On first load, stage the ball at the title's orange-ball spot —
   // idle (not bouncing), no auto-drop. Wait for it to wait for a click.
   window.addEventListener("load", () => {
+    syncTabBallSize();
     const titlePos = titleBallPos();
     if (!titlePos) return;
     tabBall.classList.add("idle");
     snapBallTo(titlePos);
   });
 
-  // Resize: re-anchor without animation. If the user hasn't clicked yet,
-  // re-stage at the title. Otherwise re-anchor at the active tab.
+  // Resize: keep the ball-size locked to the new logo width, then
+  // re-anchor without animation (title spot if no first click yet,
+  // active tab otherwise).
   window.addEventListener("resize", () => {
+    syncTabBallSize();
     if (!tabBall.classList.contains("positioned")) return;
     if (!firstClickHappened) {
       const tp = titleBallPos();
