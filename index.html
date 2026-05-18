@@ -289,10 +289,32 @@
     86%  { transform: translateY(-3px) scaleX(1)    scaleY(1); }
     100% { transform: translateY(0)    scaleX(1.20) scaleY(0.82); }
   }
-  .tab-ball.idle .tab-ball-inner { animation: none; }
+  .tab-ball.idle .tab-ball-inner,
+  .tab-ball.launching .tab-ball-inner { animation: none; }
+  /* Parabolic launch: ball rises from current spot, peaks above the
+     midpoint, then arcs down to the new tab. Two per-segment timing
+     functions give physically-correct gravity (decelerate up, accelerate
+     down). JS sets --lb-from/peak/to-x/y before adding .launching. */
+  .tab-ball.launching {
+    animation: ball-launch 0.78s forwards;
+  }
+  @keyframes ball-launch {
+    0% {
+      transform: translate(var(--lb-from-x), var(--lb-from-y));
+      animation-timing-function: cubic-bezier(0.25, 0.05, 0.55, 0.45);
+    }
+    42% {
+      transform: translate(var(--lb-peak-x), var(--lb-peak-y));
+      animation-timing-function: cubic-bezier(0.45, 0.55, 0.75, 1);
+    }
+    100% {
+      transform: translate(var(--lb-to-x), var(--lb-to-y));
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     .tab-ball { transition: opacity 0.2s; }
     .tab-ball.positioned .tab-ball-inner { animation: none; }
+    .tab-ball.launching { animation: none; }
   }
   @media (min-width: 640px) {
     .tab-ball-inner {
@@ -1086,7 +1108,7 @@
     <button data-tab="signup">Sign-up</button>
     <button data-tab="league">League</button>
   </div>
-  <button class="active tab-main" data-tab="bracket">Bracket</button>
+  <button class="tab-main" data-tab="bracket">Bracket</button>
   <div class="tabs-side tabs-right">
     <button data-tab="rules">Rules</button>
     <button data-tab="faq">FAQ</button>
@@ -1098,7 +1120,7 @@
     <b>Database not connected yet.</b> Paste your Firebase config block between the <code>FIREBASE_CONFIG_START</code> / <code>FIREBASE_CONFIG_END</code> markers in <code>index.html</code> and reload.
   </div>
 
-  <section id="tab-bracket">
+  <section id="tab-bracket" hidden>
     <div id="champion-banner-mount"></div>
     <div class="panel">
       <h2>Tournament</h2>
@@ -1612,94 +1634,122 @@
     faq: document.getElementById("tab-faq")
   };
 
-  // Bouncing-ball indicator for the active nav tab. The outer .tab-ball
-  // moves between positions via a transform transition; the inner ball
-  // runs its own infinite bounce keyframe (squash + stretch). On first
-  // load the ball is staged at the orange-ball spot in the logo (so it
-  // looks like part of the title), then hops down to the active tab —
-  // and the .title-ball overlay fades in to take its place in the logo.
+  // Bouncing-ball indicator for the active nav tab.
+  //
+  //  • On load the ball is staged at the orange-ball spot in the logo,
+  //    .idle (not bouncing) — nothing is animated, no tab is active.
+  //  • On the first click of any tab the .title-ball overlay fades in
+  //    (turning the title's orange ball white).
+  //  • Every nav-tab click launches the ball with a parabolic arc:
+  //    it jumps up from its current position, peaks above, and lands
+  //    on the new tab. After landing the inner squash-stretch bounce
+  //    resumes.
+  //  • Clicking Admin (outside nav.tabs) hides the ball.
   const tabBall = document.querySelector(".tab-ball");
   const tabsNav = document.querySelector("nav.tabs");
   const logoWrap = document.querySelector(".logo-wrap");
   const titleBallEl = document.querySelector(".title-ball");
+  let currentBallPos = null;       // last position the ball is sitting at
+  let firstClickHappened = false;  // gates the white-title-ball reveal
 
-  function tabBallTargetForBtn(btn) {
+  function navTabPos(btn) {
     if (!btn || !btn.closest("nav.tabs")) return null;
     const navRect = tabsNav.getBoundingClientRect();
     const btnRect = btn.getBoundingClientRect();
     return { x: btnRect.left + btnRect.width / 2 - navRect.left, y: 0 };
   }
 
-  function tabBallTargetForTitle() {
+  function titleBallPos() {
     if (!logoWrap || !tabsNav) return null;
     const navRect = tabsNav.getBoundingClientRect();
     const logoRect = logoWrap.getBoundingClientRect();
     // Orange ball lives at 42.74% across, 10.32% down the logo image.
-    const cx = logoRect.left + logoRect.width * 0.4274 - navRect.left;
-    const cy = logoRect.top  + logoRect.height * 0.1032 - navRect.top - 5;
-    return { x: cx, y: cy };
+    return {
+      x: logoRect.left + logoRect.width  * 0.4274 - navRect.left,
+      y: logoRect.top  + logoRect.height * 0.1032 - navRect.top - 5,
+    };
   }
 
-  function setTabBallTransform(pos, animate) {
-    if (!tabBall) return;
-    if (!animate) tabBall.classList.add("no-transition");
+  function snapBallTo(pos) {
+    tabBall.classList.add("no-transition");
     tabBall.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
     tabBall.classList.add("positioned");
-    if (!animate) requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
+    requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
+    currentBallPos = pos;
   }
 
-  function positionTabBall(btn, animate) {
-    if (!tabBall || !tabsNav) return;
-    if (!btn || !btn.closest("nav.tabs")) {
-      tabBall.classList.remove("positioned");
-      return;
-    }
-    setTabBallTransform(tabBallTargetForBtn(btn), animate);
-  }
+  // Parabolic launch: ball jumps up from its current location, arcs
+  // over, and lands on the target tab. After the keyframe finishes
+  // we drop the .launching class so the regular bounce loop resumes.
+  function launchBallTo(toPos) {
+    if (!currentBallPos) return;
+    const peakX = (currentBallPos.x + toPos.x) / 2;
+    // Peak ~46px above the higher of from/to so it always arcs UP.
+    const peakY = Math.min(currentBallPos.y, toPos.y) - 46;
+    tabBall.style.setProperty("--lb-from-x", `${currentBallPos.x}px`);
+    tabBall.style.setProperty("--lb-from-y", `${currentBallPos.y}px`);
+    tabBall.style.setProperty("--lb-peak-x", `${peakX}px`);
+    tabBall.style.setProperty("--lb-peak-y", `${peakY}px`);
+    tabBall.style.setProperty("--lb-to-x",   `${toPos.x}px`);
+    tabBall.style.setProperty("--lb-to-y",   `${toPos.y}px`);
 
-  tabBtns.forEach(b => b.addEventListener("click", () => {
-    tabBtns.forEach(x => x.classList.toggle("active", x === b));
-    Object.entries(sections).forEach(([k, el]) => el.hidden = (k !== b.dataset.tab));
-    positionTabBall(b, true);
-  }));
+    // Restart the keyframe even if .launching was already on the element.
+    tabBall.classList.remove("launching");
+    void tabBall.offsetWidth;
+    tabBall.classList.add("launching", "idle");  // pause inner bounce during launch
 
-  // First-load choreography: stage at the title's orange-ball spot
-  // (idle = no bouncing yet), wait briefly, then drop down to the
-  // active tab. After landing, start bouncing + fade the white ball
-  // in to replace the orange ball in the title.
-  let firstLoadDone = false;
-  window.addEventListener("load", () => {
-    if (firstLoadDone) return;
-    firstLoadDone = true;
-    const titlePos = tabBallTargetForTitle();
-    if (!titlePos) {
-      positionTabBall(document.querySelector("nav.tabs button.active"), false);
-      return;
-    }
-    tabBall.classList.add("idle");
-    setTabBallTransform(titlePos, false);
     setTimeout(() => {
-      const activeBtn = document.querySelector("nav.tabs button.active");
-      const tabPos = tabBallTargetForBtn(activeBtn);
-      if (tabPos) setTabBallTransform(tabPos, true);
-      // After the drop transition (0.45s), start bouncing and reveal
-      // the white ball in the title.
-      setTimeout(() => {
-        tabBall.classList.remove("idle");
-        if (titleBallEl) titleBallEl.classList.add("shown");
-      }, 480);
-    }, 650);
+      // Lock the inline transform to the end position, then drop the
+      // animation class. Inner squash-stretch resumes since .idle is gone.
+      tabBall.style.transform = `translate(${toPos.x}px, ${toPos.y}px)`;
+      tabBall.classList.remove("launching", "idle");
+      currentBallPos = toPos;
+    }, 780);
+  }
+
+  function handleTabClick(btn) {
+    tabBtns.forEach(x => x.classList.toggle("active", x === btn));
+    Object.entries(sections).forEach(([k, el]) => el.hidden = (k !== btn.dataset.tab));
+    if (!firstClickHappened) {
+      firstClickHappened = true;
+      if (titleBallEl) titleBallEl.classList.add("shown");
+    }
+    if (!btn.closest("nav.tabs")) {
+      // Admin (outside nav.tabs): hide the ball, keep currentBallPos.
+      tabBall.classList.remove("positioned", "launching", "idle");
+      return;
+    }
+    const toPos = navTabPos(btn);
+    if (!toPos) return;
+    // If the ball is currently hidden (e.g. after an Admin click), pop
+    // it back to its last known spot before launching so the arc has
+    // a sensible origin.
+    if (!tabBall.classList.contains("positioned")) snapBallTo(currentBallPos);
+    launchBallTo(toPos);
+  }
+
+  tabBtns.forEach(b => b.addEventListener("click", () => handleTabClick(b)));
+
+  // On first load, stage the ball at the title's orange-ball spot —
+  // idle (not bouncing), no auto-drop. Wait for it to wait for a click.
+  window.addEventListener("load", () => {
+    const titlePos = titleBallPos();
+    if (!titlePos) return;
+    tabBall.classList.add("idle");
+    snapBallTo(titlePos);
   });
 
+  // Resize: re-anchor without animation. If the user hasn't clicked yet,
+  // re-stage at the title. Otherwise re-anchor at the active tab.
   window.addEventListener("resize", () => {
-    // Don't re-trigger the drop on resize — just keep the ball where it
-    // belongs (active tab or title, depending on whether intro played).
     if (!tabBall.classList.contains("positioned")) return;
-    if (tabBall.classList.contains("idle")) {
-      const titlePos = tabBallTargetForTitle();
-      if (titlePos) setTabBallTransform(titlePos, false);
+    if (!firstClickHappened) {
+      const tp = titleBallPos();
+      if (tp) snapBallTo(tp);
     } else {
-      positionTabBall(document.querySelector("nav.tabs button.active"), false);
+      const activeBtn = document.querySelector("nav.tabs button.active");
+      const tp = navTabPos(activeBtn);
+      if (tp) snapBallTo(tp);
     }
   });
 
