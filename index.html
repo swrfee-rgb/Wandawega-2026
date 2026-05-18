@@ -559,8 +559,8 @@
     display: flex; align-items: baseline; justify-content: space-between;
   }
   .league-tag {
-    font-size: 10px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.18em;
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
     text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
   .league-a .league-tag { color: var(--cyan); }
@@ -940,6 +940,17 @@
 
   const DEFAULT_PASSCODE = "pingpong2026";
   const OFFICES = ["Chicago", "San Francisco", "New York", "Paris"];
+  const OFFICE_ABBREV = {
+    "Chicago": "Chicago",
+    "San Francisco": "SF",
+    "New York": "NY",
+    "Paris": "Paris"
+  };
+  function leagueLabel(league) {
+    return asArray(league && league.offices)
+      .map(o => OFFICE_ABBREV[o] || o)
+      .join("–");
+  }
 
   // Studio Gang people → portrait photo lookup. Regenerate by re-running
   // /tmp/sg_parser.py against an updated copy of https://studiogang.com/people/
@@ -1521,7 +1532,7 @@
         return `
           <div class="league-card league-${key.toLowerCase()}">
             <div class="league-head">
-              <span class="league-tag">League ${key}</span>
+              <span class="league-tag">${escapeHtml(leagueLabel(league))}</span>
               <span class="league-total">${total}<span class="league-total-lbl">${total === 1 ? "player" : "players"}</span></span>
             </div>
             <div class="league-offices">${officeRows}</div>
