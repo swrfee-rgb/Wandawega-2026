@@ -302,7 +302,7 @@
      functions give physically-correct gravity (decelerate up, accelerate
      down). JS sets --lb-from/peak/to-x/y before adding .launching. */
   .tab-ball.launching {
-    animation: ball-launch 0.78s forwards;
+    animation: ball-launch var(--lb-duration, 0.78s) forwards;
   }
   @keyframes ball-launch {
     0% {
@@ -1696,11 +1696,22 @@
   // Parabolic launch: ball jumps up from its current location, arcs
   // over, and lands on the target tab. After the keyframe finishes
   // we drop the .launching class so the regular bounce loop resumes.
+  //
+  // Peak height and duration both scale with travel distance — short
+  // tab-to-tab hops get a low, quick arc; the long title-to-tab drop
+  // gets a taller, slower arc. Feels more like a ball, less like a
+  // pole-vault.
   function launchBallTo(toPos) {
     if (!currentBallPos) return;
+    const dx = toPos.x - currentBallPos.x;
+    const dy = toPos.y - currentBallPos.y;
+    const dist = Math.hypot(dx, dy);
     const peakX = (currentBallPos.x + toPos.x) / 2;
-    // Peak ~46px above the higher of from/to so it always arcs UP.
-    const peakY = Math.min(currentBallPos.y, toPos.y) - 46;
+    const peakHeight = Math.max(14, Math.min(36, dist * 0.14));
+    const peakY = Math.min(currentBallPos.y, toPos.y) - peakHeight;
+    // 0.5s for short hops, up to 0.85s for the long drop from title.
+    const durationS = Math.max(0.5, Math.min(0.85, 0.4 + dist / 350));
+    tabBall.style.setProperty("--lb-duration", `${durationS}s`);
     tabBall.style.setProperty("--lb-from-x", `${currentBallPos.x}px`);
     tabBall.style.setProperty("--lb-from-y", `${currentBallPos.y}px`);
     tabBall.style.setProperty("--lb-peak-x", `${peakX}px`);
@@ -1719,7 +1730,7 @@
       tabBall.style.transform = `translate(${toPos.x}px, ${toPos.y}px)`;
       tabBall.classList.remove("launching", "idle");
       currentBallPos = toPos;
-    }, 780);
+    }, durationS * 1000);
   }
 
   function handleTabClick(btn) {
