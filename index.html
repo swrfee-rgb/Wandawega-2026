@@ -328,26 +328,26 @@
     gap: 8px;
     min-height: 240px;
   }
-  /* Compact .match styling inside the diagram */
+  /* .match styling inside the diagram — first names only, so cards can breathe */
   .bracket-diagram .match {
-    padding: 6px 12px 4px;
+    padding: 10px 14px 8px;
     margin-bottom: 0;
-    border-radius: 14px;
+    border-radius: 16px;
     position: relative;
   }
   .bracket-diagram .match-tag { display: none; }
-  .bracket-diagram .slot { padding: 5px 0; min-height: 30px; }
+  .bracket-diagram .slot { padding: 7px 0; min-height: 38px; }
   .bracket-diagram .slot .nm {
-    font-size: 12px; line-height: 1.2;
+    font-size: 15px; line-height: 1.25; font-weight: 500;
   }
-  .bracket-diagram .slot-info { gap: 8px; }
-  .bracket-diagram .team-avatars .avatar { width: 22px; height: 22px; font-size: 8px; }
-  .bracket-diagram .team-avatars .avatar + .avatar { margin-left: -6px; }
-  .bracket-diagram .vs { font-size: 8px; padding: 1px 0; letter-spacing: 0.22em; }
+  .bracket-diagram .slot-info { gap: 10px; }
+  .bracket-diagram .team-avatars .avatar { width: 28px; height: 28px; font-size: 10px; }
+  .bracket-diagram .team-avatars .avatar + .avatar { margin-left: -8px; }
+  .bracket-diagram .vs { font-size: 10px; padding: 2px 0; letter-spacing: 0.22em; }
   .bracket-diagram .slot button.pick {
-    padding: 3px 10px; font-size: 9px; letter-spacing: 0.14em;
+    padding: 5px 12px; font-size: 11px; letter-spacing: 0.14em;
   }
-  .bracket-diagram .tap { font-size: 9px; letter-spacing: 0.16em; }
+  .bracket-diagram .tap { font-size: 11px; letter-spacing: 0.16em; }
   .bracket-slot { display: flex; }
   .bracket-slot > .match { flex: 1; }
   /* Connector stubs — short horizontal line on each match's right side,
@@ -1394,7 +1394,8 @@
         const tail = canPick
           ? `<button class="pick" data-r="${r}" data-m="${m}" data-slot="${slotKey}">Winner</button>`
           : (isWinner ? `<span class="tap">Won</span>` : "");
-        const teamName = names.join(" & ");
+        const firstName = (n) => String(n || "").trim().split(/\s+/)[0] || "";
+        const teamName = `${firstName(names[0])} & ${firstName(names[1])}`;
         const avatars = `<div class="team-avatars">${avatarHtml(names[0], "sm")}${avatarHtml(names[1], "sm")}</div>`;
         return `<div class="slot ${cls}"><div class="slot-info">${avatars}<span class="nm">${escapeHtml(teamName)}</span></div>${tail}</div>`;
       };
