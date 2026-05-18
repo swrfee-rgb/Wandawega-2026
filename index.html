@@ -160,22 +160,31 @@
     padding: 16px 0; font-family: inherit;
     font-size: 11px; font-weight: 700;
     letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--navy); cursor: pointer;
+    color: #ffffff; cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: color 0.15s;
-    /* Light halo so the navy text still reads against darker video
-       frames (window frame, shadowed wood). */
+    transition: color 0.15s, text-shadow 0.15s;
+    /* Soft white glow — no offset, just radial bloom. */
     text-shadow:
-      0 0 2px rgba(255,255,255,0.9),
-      0 0 6px rgba(255,255,255,0.7);
+      0 0 6px rgba(255,255,255,0.65),
+      0 0 14px rgba(255,255,255,0.35);
     white-space: nowrap;
   }
   nav.tabs button.active {
-    color: var(--navy);
+    color: #ffffff;
     border-bottom-color: var(--cyan);
+    /* Active tab picks up a faint cyan tint in the glow. */
+    text-shadow:
+      0 0 6px rgba(255,255,255,0.8),
+      0 0 14px rgba(42,214,238,0.5),
+      0 0 24px rgba(42,214,238,0.25);
   }
-  nav.tabs button:hover { color: #000000; }
+  nav.tabs button:hover {
+    color: #ffffff;
+    text-shadow:
+      0 0 6px rgba(255,255,255,0.85),
+      0 0 18px rgba(255,255,255,0.5);
+  }
   nav.tabs button.tab-main {
     font-size: 14px;
     font-weight: 700;
