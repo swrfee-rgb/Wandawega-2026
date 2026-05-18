@@ -109,11 +109,16 @@
     color: white;
     text-align: center;
   }
-  .brand-logo {
+  .logo-wrap {
+    position: relative;
     display: block;
     width: 100%; max-width: 420px;
-    height: auto;
     margin: 0 auto;
+  }
+  .brand-logo {
+    display: block;
+    width: 100%;
+    height: auto;
     /* Layered drop-shadows: tight ones hug every letter and paddle edge
        (so the white text reads against light parts of the video), the
        wider one is the ambient shadow under the logo. */
@@ -122,6 +127,28 @@
       drop-shadow(0 0 3px rgba(0,0,0,0.6))
       drop-shadow(0 4px 24px rgba(0,0,0,0.55));
   }
+  /* White ball overlay at the exact spot of the orange ball in the
+     logo (42.74% x 10.32%, diameter 3.15% of logo width). Stays
+     invisible until the tab indicator ball has 'jumped' down to the
+     active tab, then fades in to take its place. */
+  .title-ball {
+    position: absolute;
+    left: 42.74%;
+    top: 10.32%;
+    width: 3.15%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #ffffff 0%, #f1f1f1 60%, #c4c4c4 100%);
+    box-shadow:
+      inset 0 -1px 1px rgba(0,0,0,0.12),
+      0 1px 3px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: opacity 0.45s ease-out;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .title-ball.shown { opacity: 1; }
   .hero-corner {
     position: absolute; top: 16px; right: 16px;
     display: flex; align-items: center; gap: 10px;
@@ -236,28 +263,42 @@
   .tab-ball.no-transition { transition: opacity 0.25s ease-out; }
   .tab-ball-inner {
     position: absolute;
-    left: -6px; top: 0;            /* center the 12px ball on the anchor */
-    width: 12px; height: 12px;
+    left: -7px; top: 0;            /* center the ball on the anchor */
+    width: 14px; height: 14px;
     border-radius: 50%;
     background: radial-gradient(circle at 32% 30%, #ffe48a 0%, #f5a623 60%, #c97808 100%);
     box-shadow:
       0 1px 3px rgba(0,0,0,0.4),
       0 0 8px rgba(245,166,35,0.55),
       0 0 14px rgba(245,166,35,0.25);
+    transform-origin: center bottom;
   }
-  /* The ball hops continuously on top of the active tab. The keyframe
-     stays at the floor briefly (impact pause) and arcs up to the peak,
-     ease-in-out so the apex feels lighter. */
+  /* Playful ping-pong bounce: quick rise, lingering apex, snappy fall,
+     with squash on impact and stretch through the arc.  Per-segment
+     timing functions: rise uses ease-out (decelerates toward the apex),
+     fall uses ease-in (accelerates toward the floor) — that's gravity. */
   .tab-ball.positioned .tab-ball-inner {
-    animation: tab-ball-bounce 0.85s ease-in-out infinite;
+    animation: tab-ball-bounce 0.58s infinite;
   }
   @keyframes tab-ball-bounce {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-9px); }
+    0%   { transform: translateY(0)    scaleX(1.20) scaleY(0.82);
+           animation-timing-function: cubic-bezier(0.3, 0, 0.6, 0.4); }
+    14%  { transform: translateY(-3px) scaleX(1)    scaleY(1); }
+    50%  { transform: translateY(-16px) scaleX(0.94) scaleY(1.08);
+           animation-timing-function: cubic-bezier(0.4, 0.6, 0.7, 1); }
+    86%  { transform: translateY(-3px) scaleX(1)    scaleY(1); }
+    100% { transform: translateY(0)    scaleX(1.20) scaleY(0.82); }
   }
+  .tab-ball.idle .tab-ball-inner { animation: none; }
   @media (prefers-reduced-motion: reduce) {
     .tab-ball { transition: opacity 0.2s; }
     .tab-ball.positioned .tab-ball-inner { animation: none; }
+  }
+  @media (min-width: 640px) {
+    .tab-ball-inner {
+      left: -8px;
+      width: 17px; height: 17px;
+    }
   }
   nav.tabs button:hover {
     color: #ffffff;
@@ -1006,7 +1047,7 @@
 
   @media (min-width: 640px) {
     .hero { padding: 36px 36px 40px; }
-    .brand-logo { max-width: 520px; }
+    .logo-wrap { max-width: 520px; }
     .hero-video { max-width: 360px; }
     main { padding: 36px 36px 64px; }
     nav.tabs {
@@ -1033,7 +1074,10 @@
     <button class="admin-pill" data-tab="admin" aria-label="Admin"><span class="key">⚙</span><span class="lbl">Admin</span></button>
     <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
   </div>
-  <img class="brand-logo" src="logo.png?v=20250518f" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
+  <div class="logo-wrap">
+    <img class="brand-logo" src="logo.png?v=20250518f" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
+    <div class="title-ball" aria-hidden="true"></div>
+  </div>
 </section>
 
 <nav class="tabs" role="tablist">
@@ -1568,27 +1612,49 @@
     faq: document.getElementById("tab-faq")
   };
 
-  // Bouncing-ball indicator for the active nav tab. Slides horizontally
-  // (transition on the outer .tab-ball) while the inner ball runs its
-  // own endless bounce keyframe. The Admin pill lives outside nav.tabs,
-  // so the ball just hides when Admin is active.
+  // Bouncing-ball indicator for the active nav tab. The outer .tab-ball
+  // moves between positions via a transform transition; the inner ball
+  // runs its own infinite bounce keyframe (squash + stretch). On first
+  // load the ball is staged at the orange-ball spot in the logo (so it
+  // looks like part of the title), then hops down to the active tab —
+  // and the .title-ball overlay fades in to take its place in the logo.
   const tabBall = document.querySelector(".tab-ball");
   const tabsNav = document.querySelector("nav.tabs");
+  const logoWrap = document.querySelector(".logo-wrap");
+  const titleBallEl = document.querySelector(".title-ball");
+
+  function tabBallTargetForBtn(btn) {
+    if (!btn || !btn.closest("nav.tabs")) return null;
+    const navRect = tabsNav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    return { x: btnRect.left + btnRect.width / 2 - navRect.left, y: 0 };
+  }
+
+  function tabBallTargetForTitle() {
+    if (!logoWrap || !tabsNav) return null;
+    const navRect = tabsNav.getBoundingClientRect();
+    const logoRect = logoWrap.getBoundingClientRect();
+    // Orange ball lives at 42.74% across, 10.32% down the logo image.
+    const cx = logoRect.left + logoRect.width * 0.4274 - navRect.left;
+    const cy = logoRect.top  + logoRect.height * 0.1032 - navRect.top - 5;
+    return { x: cx, y: cy };
+  }
+
+  function setTabBallTransform(pos, animate) {
+    if (!tabBall) return;
+    if (!animate) tabBall.classList.add("no-transition");
+    tabBall.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+    tabBall.classList.add("positioned");
+    if (!animate) requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
+  }
+
   function positionTabBall(btn, animate) {
     if (!tabBall || !tabsNav) return;
     if (!btn || !btn.closest("nav.tabs")) {
       tabBall.classList.remove("positioned");
       return;
     }
-    const navRect = tabsNav.getBoundingClientRect();
-    const btnRect = btn.getBoundingClientRect();
-    const cx = btnRect.left + btnRect.width / 2 - navRect.left;
-    if (!animate) tabBall.classList.add("no-transition");
-    tabBall.style.transform = `translateX(${cx}px)`;
-    tabBall.classList.add("positioned");
-    if (!animate) {
-      requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
-    }
+    setTabBallTransform(tabBallTargetForBtn(btn), animate);
   }
 
   tabBtns.forEach(b => b.addEventListener("click", () => {
@@ -1597,12 +1663,44 @@
     positionTabBall(b, true);
   }));
 
-  // Place ball above the initial active tab once layout is ready.
+  // First-load choreography: stage at the title's orange-ball spot
+  // (idle = no bouncing yet), wait briefly, then drop down to the
+  // active tab. After landing, start bouncing + fade the white ball
+  // in to replace the orange ball in the title.
+  let firstLoadDone = false;
   window.addEventListener("load", () => {
-    positionTabBall(document.querySelector("nav.tabs button.active"), false);
+    if (firstLoadDone) return;
+    firstLoadDone = true;
+    const titlePos = tabBallTargetForTitle();
+    if (!titlePos) {
+      positionTabBall(document.querySelector("nav.tabs button.active"), false);
+      return;
+    }
+    tabBall.classList.add("idle");
+    setTabBallTransform(titlePos, false);
+    setTimeout(() => {
+      const activeBtn = document.querySelector("nav.tabs button.active");
+      const tabPos = tabBallTargetForBtn(activeBtn);
+      if (tabPos) setTabBallTransform(tabPos, true);
+      // After the drop transition (0.45s), start bouncing and reveal
+      // the white ball in the title.
+      setTimeout(() => {
+        tabBall.classList.remove("idle");
+        if (titleBallEl) titleBallEl.classList.add("shown");
+      }, 480);
+    }, 650);
   });
+
   window.addEventListener("resize", () => {
-    positionTabBall(document.querySelector("nav.tabs button.active"), false);
+    // Don't re-trigger the drop on resize — just keep the ball where it
+    // belongs (active tab or title, depending on whether intro played).
+    if (!tabBall.classList.contains("positioned")) return;
+    if (tabBall.classList.contains("idle")) {
+      const titlePos = tabBallTargetForTitle();
+      if (titlePos) setTabBallTransform(titlePos, false);
+    } else {
+      positionTabBall(document.querySelector("nav.tabs button.active"), false);
+    }
   });
 
   const toastEl = document.getElementById("toast");
