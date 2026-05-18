@@ -95,25 +95,23 @@
 
   /* HERO — sits directly over the video, no background */
   .hero {
-    padding: 32px 24px 36px;
+    padding: 56px 24px 32px;
     color: white;
-  }
-  .hero-row {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 16px;
+    text-align: center;
   }
   .brand-logo {
     display: block;
-    width: 100%; max-width: 360px;
+    width: 100%; max-width: 420px;
     height: auto;
-    filter: drop-shadow(0 2px 16px rgba(0,0,0,0.5));
+    margin: 0 auto;
+    filter: drop-shadow(0 4px 24px rgba(0,0,0,0.55));
   }
   .pill {
+    position: absolute; top: 16px; right: 16px;
     display: inline-flex; align-items: center; gap: 7px;
     font-size: 10px; font-weight: 500;
     letter-spacing: 0.14em; text-transform: uppercase;
     color: rgba(255,255,255,0.9); white-space: nowrap;
-    padding-top: 4px;
     text-shadow: 0 1px 6px rgba(0,0,0,0.4);
   }
   .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.7); box-shadow: 0 0 6px rgba(0,0,0,0.3); }
@@ -463,7 +461,7 @@
 
   @media (min-width: 640px) {
     .hero { padding: 36px 36px 40px; }
-    .brand-logo { max-width: 440px; }
+    .brand-logo { max-width: 520px; }
     .hero-video { max-width: 360px; }
     main { padding: 36px 36px 64px; }
     nav.tabs { padding: 0 36px; }
@@ -479,10 +477,8 @@
 </div>
 
 <section class="hero">
-  <div class="hero-row">
-    <img class="brand-logo" src="logo.svg" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
-    <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
-  </div>
+  <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
+  <img class="brand-logo" src="logo.png" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
 </section>
 
 <nav class="tabs" role="tablist">
