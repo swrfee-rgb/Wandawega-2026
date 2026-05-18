@@ -289,6 +289,86 @@
   /* Round section that has actionable matches — small accent on the heading */
   .round.round-active .round-head span:first-child { color: var(--cyan); }
   .round.round-done { margin-top: 24px; opacity: 0.85; }
+
+  /* SINGLE-ELIM BRACKET DIAGRAM (Bracket tab) */
+  .bracket-diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 28px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 24px 18px;
+    margin: 0 -24px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .bracket-diagram::-webkit-scrollbar { height: 6px; }
+  .bracket-diagram::-webkit-scrollbar-track { background: transparent; }
+  .bracket-diagram::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  .bracket-col {
+    display: flex; flex-direction: column;
+    flex: 0 0 220px;
+    scroll-snap-align: start;
+  }
+  .bracket-col-final { flex-basis: 240px; }
+  .bracket-col-head {
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.85);
+    text-align: center;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px dashed rgba(255,255,255,0.16);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .bracket-matches {
+    flex: 1;
+    display: flex; flex-direction: column;
+    justify-content: space-around;
+    gap: 8px;
+    min-height: 240px;
+  }
+  /* Compact .match styling inside the diagram */
+  .bracket-diagram .match {
+    padding: 6px 12px 4px;
+    margin-bottom: 0;
+    border-radius: 14px;
+    position: relative;
+  }
+  .bracket-diagram .match-tag { display: none; }
+  .bracket-diagram .slot { padding: 5px 0; min-height: 30px; }
+  .bracket-diagram .slot .nm {
+    font-size: 12px; line-height: 1.2;
+  }
+  .bracket-diagram .slot-info { gap: 8px; }
+  .bracket-diagram .team-avatars .avatar { width: 22px; height: 22px; font-size: 8px; }
+  .bracket-diagram .team-avatars .avatar + .avatar { margin-left: -6px; }
+  .bracket-diagram .vs { font-size: 8px; padding: 1px 0; letter-spacing: 0.22em; }
+  .bracket-diagram .slot button.pick {
+    padding: 3px 10px; font-size: 9px; letter-spacing: 0.14em;
+  }
+  .bracket-diagram .tap { font-size: 9px; letter-spacing: 0.16em; }
+  .bracket-slot { display: flex; }
+  .bracket-slot > .match { flex: 1; }
+  /* Connector stubs — short horizontal line on each match's right side,
+     mirrored on the next round's left side so they meet across the gap. */
+  .bracket-col:not(:last-child) .bracket-slot::after {
+    content: "";
+    position: absolute;
+    left: 100%; top: 50%;
+    width: 14px; height: 2px;
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+  }
+  .bracket-col:not(:first-child) .bracket-slot::before {
+    content: "";
+    position: absolute;
+    right: 100%; top: 50%;
+    width: 14px; height: 2px;
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+  }
+  .bracket-slot { position: relative; }
   .slot {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 0;
@@ -1254,33 +1334,36 @@
       }
       const labels = roundLabels(rounds.length);
       const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
-      const matchState = (m) => m.winnerSlot ? 2 : (teamReady(m.t1Ids) && teamReady(m.t2Ids) ? 0 : 1);
-      const roundActivity = (matches) => {
-        if (matches.some(m => matchState(m) === 0)) return 0;       // has actionable match
-        if (matches.every(m => matchState(m) === 2)) return 2;      // every match done
-        return 1;                                                    // waiting on feeder
-      };
 
-      // Round-based sections, but reorder rounds: actionable first, completed last.
-      const ordered = rounds.map((matches, r) => ({ r, label: labels[r], matches }))
-                            .sort((a, b) => roundActivity(a.matches) - roundActivity(b.matches) || a.r - b.r);
-
-      let html = "";
-      for (const { r, label, matches } of ordered) {
-        // Within a round, surface actionable matches above waiting ones above completed.
-        const sorted = matches
-          .map((m, origIdx) => ({ m, origIdx }))
-          .sort((a, b) => matchState(a.m) - matchState(b.m) || a.origIdx - b.origIdx);
-
-        const activity = roundActivity(matches);
-        const roundCls = activity === 0 ? "active" : activity === 2 ? "done" : "waiting";
-        html += `<div class="round round-${roundCls}"><div class="round-head"><span>${label}</span><span>${matches.length} match${matches.length === 1 ? "" : "es"}</span></div>`;
-        for (const { m, origIdx } of sorted) {
-          html += matchHtml(m, r, origIdx, labels[r - 1], label);
+      // Single-elimination tree drawn left-to-right (round per column).
+      // Each column has 2x the vertical slots of the next so winners line up
+      // exactly halfway between their two feeder matches.
+      let html = `<div class="bracket-diagram" role="region" aria-label="Tournament bracket">`;
+      for (let r = 0; r < rounds.length; r++) {
+        const matches = rounds[r];
+        const colCls = (r === rounds.length - 1) ? "bracket-col bracket-col-final" : "bracket-col";
+        html += `<div class="${colCls}">`;
+        html += `<div class="bracket-col-head">${labels[r]}</div>`;
+        html += `<div class="bracket-matches">`;
+        for (let m = 0; m < matches.length; m++) {
+          html += `<div class="bracket-slot">${matchHtml(matches[m], r, m, labels[r - 1], null)}</div>`;
         }
-        html += `</div>`;
+        html += `</div></div>`;
       }
+      html += `</div>`;
       mount.innerHTML = html;
+
+      // Auto-scroll horizontally to the earliest round that still has an
+      // actionable match so the action sits in view on first open.
+      const matchState = (m) => m.winnerSlot ? 2 : (teamReady(m.t1Ids) && teamReady(m.t2Ids) ? 0 : 1);
+      let activeR = -1;
+      for (let r = 0; r < rounds.length; r++) {
+        if (rounds[r].some(m => matchState(m) === 0)) { activeR = r; break; }
+      }
+      if (activeR > 0) {
+        const cols = mount.querySelectorAll(".bracket-col");
+        if (cols[activeR]) cols[activeR].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+      }
 
       mount.querySelectorAll("button.pick").forEach(btn => {
         btn.addEventListener("click", () => {
