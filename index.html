@@ -163,7 +163,10 @@
     color: #ffffff; cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    transition: color 0.15s, text-shadow 0.15s;
+    position: relative;
+    transform: scale(1);
+    transform-origin: bottom center;
+    transition: color 0.15s, text-shadow 0.15s, transform 0.18s ease-out;
     /* Soft white glow — no offset, just radial bloom. */
     text-shadow:
       0 0 6px rgba(255,255,255,0.65),
@@ -181,9 +184,15 @@
   }
   nav.tabs button:hover {
     color: #ffffff;
+    transform: scale(1.5);
+    z-index: 2;
     text-shadow:
       0 0 6px rgba(255,255,255,0.85),
       0 0 18px rgba(255,255,255,0.5);
+  }
+  /* Touch devices: scale-on-hover is awkward, so disable it there. */
+  @media (hover: none) {
+    nav.tabs button:hover { transform: scale(1); }
   }
   nav.tabs button.tab-main {
     font-size: 14px;
