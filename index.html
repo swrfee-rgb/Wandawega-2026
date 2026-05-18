@@ -212,12 +212,48 @@
   }
   nav.tabs button.active {
     color: #ffffff;
-    border-bottom-color: var(--cyan);
-    /* Active tab picks up a faint cyan tint in the glow. */
+    /* No underline anymore — the orange ball above marks the active tab. */
     text-shadow:
       0 0 6px rgba(255,255,255,0.8),
-      0 0 14px rgba(42,214,238,0.5),
-      0 0 24px rgba(42,214,238,0.25);
+      0 0 14px rgba(255,255,255,0.45),
+      0 0 22px rgba(245,166,35,0.35);
+  }
+  /* Bouncing ping-pong-ball indicator: a single element that slides
+     horizontally to whichever tab is active, with a small vertical
+     arc to look like a real ball hop. */
+  .tab-ball {
+    position: absolute;
+    top: 5px; left: 0;
+    width: 0; height: 0;          /* zero-size anchor */
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.25, 1.1), opacity 0.25s ease-out;
+  }
+  .tab-ball.positioned { opacity: 1; }
+  .tab-ball.no-transition { transition: opacity 0.25s ease-out; }
+  .tab-ball-inner {
+    position: absolute;
+    left: -6px; top: 0;            /* center the 12px ball on the anchor */
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #ffe48a 0%, #f5a623 60%, #c97808 100%);
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.4),
+      0 0 8px rgba(245,166,35,0.55),
+      0 0 14px rgba(245,166,35,0.25);
+  }
+  .tab-ball.traveling .tab-ball-inner {
+    animation: tab-ball-arc 0.45s cubic-bezier(0.4, 0, 0.25, 1.1);
+  }
+  @keyframes tab-ball-arc {
+    0%   { transform: translateY(0); }
+    40%  { transform: translateY(-9px); }
+    100% { transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tab-ball { transition: opacity 0.2s; }
+    .tab-ball.traveling .tab-ball-inner { animation: none; }
   }
   nav.tabs button:hover {
     color: #ffffff;
@@ -237,10 +273,6 @@
     letter-spacing: 0.14em;
     padding: 16px 14px;
   }
-  nav.tabs button.tab-main.active {
-    border-bottom-width: 3px;
-  }
-
   main {
     max-width: 720px; margin: 0 auto;
     padding: 28px 24px 48px;
@@ -1001,6 +1033,7 @@
 </section>
 
 <nav class="tabs" role="tablist">
+  <div class="tab-ball" aria-hidden="true"><div class="tab-ball-inner"></div></div>
   <div class="tabs-side tabs-left">
     <button data-tab="signup">Sign-up</button>
     <button data-tab="league">League</button>
@@ -1530,10 +1563,47 @@
     rules: document.getElementById("tab-rules"),
     faq: document.getElementById("tab-faq")
   };
+
+  // Bouncing-ball indicator for the active nav tab. Slides horizontally
+  // (transition on the outer .tab-ball) while the inner ball does a
+  // single arc keyframe to look like a hop. The Admin pill lives outside
+  // nav.tabs, so the ball just hides when Admin is active.
+  const tabBall = document.querySelector(".tab-ball");
+  const tabsNav = document.querySelector("nav.tabs");
+  function positionTabBall(btn, animate) {
+    if (!tabBall || !tabsNav) return;
+    if (!btn || !btn.closest("nav.tabs")) {
+      tabBall.classList.remove("positioned");
+      return;
+    }
+    const navRect = tabsNav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    const cx = btnRect.left + btnRect.width / 2 - navRect.left;
+    if (!animate) tabBall.classList.add("no-transition");
+    tabBall.style.transform = `translateX(${cx}px)`;
+    tabBall.classList.add("positioned");
+    if (!animate) {
+      requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
+    } else {
+      tabBall.classList.remove("traveling");
+      void tabBall.offsetWidth;       // restart the arc keyframe
+      tabBall.classList.add("traveling");
+    }
+  }
+
   tabBtns.forEach(b => b.addEventListener("click", () => {
     tabBtns.forEach(x => x.classList.toggle("active", x === b));
     Object.entries(sections).forEach(([k, el]) => el.hidden = (k !== b.dataset.tab));
+    positionTabBall(b, true);
   }));
+
+  // Place ball above the initial active tab once layout is ready.
+  window.addEventListener("load", () => {
+    positionTabBall(document.querySelector("nav.tabs button.active"), false);
+  });
+  window.addEventListener("resize", () => {
+    positionTabBall(document.querySelector("nav.tabs button.active"), false);
+  });
 
   const toastEl = document.getElementById("toast");
   let toastTimer = null;
