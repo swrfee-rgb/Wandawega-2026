@@ -190,8 +190,10 @@
     gap: 14px;
     min-width: 0;
   }
-  nav.tabs .tabs-left  { justify-content: flex-start; }
-  nav.tabs .tabs-right { justify-content: flex-end; }
+  /* Both side groups use space-evenly so Sign-up/League on the left
+     and Rules/FAQ on the right mirror each other around Bracket. */
+  nav.tabs .tabs-left,
+  nav.tabs .tabs-right { justify-content: space-evenly; }
   nav.tabs button {
     appearance: none; background: none; border: 0;
     padding: 16px 0; font-family: inherit;
@@ -243,17 +245,19 @@
       0 0 8px rgba(245,166,35,0.55),
       0 0 14px rgba(245,166,35,0.25);
   }
-  .tab-ball.traveling .tab-ball-inner {
-    animation: tab-ball-arc 0.45s cubic-bezier(0.4, 0, 0.25, 1.1);
+  /* The ball hops continuously on top of the active tab. The keyframe
+     stays at the floor briefly (impact pause) and arcs up to the peak,
+     ease-in-out so the apex feels lighter. */
+  .tab-ball.positioned .tab-ball-inner {
+    animation: tab-ball-bounce 0.85s ease-in-out infinite;
   }
-  @keyframes tab-ball-arc {
-    0%   { transform: translateY(0); }
-    40%  { transform: translateY(-9px); }
-    100% { transform: translateY(0); }
+  @keyframes tab-ball-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-9px); }
   }
   @media (prefers-reduced-motion: reduce) {
     .tab-ball { transition: opacity 0.2s; }
-    .tab-ball.traveling .tab-ball-inner { animation: none; }
+    .tab-ball.positioned .tab-ball-inner { animation: none; }
   }
   nav.tabs button:hover {
     color: #ffffff;
@@ -1565,9 +1569,9 @@
   };
 
   // Bouncing-ball indicator for the active nav tab. Slides horizontally
-  // (transition on the outer .tab-ball) while the inner ball does a
-  // single arc keyframe to look like a hop. The Admin pill lives outside
-  // nav.tabs, so the ball just hides when Admin is active.
+  // (transition on the outer .tab-ball) while the inner ball runs its
+  // own endless bounce keyframe. The Admin pill lives outside nav.tabs,
+  // so the ball just hides when Admin is active.
   const tabBall = document.querySelector(".tab-ball");
   const tabsNav = document.querySelector("nav.tabs");
   function positionTabBall(btn, animate) {
@@ -1584,10 +1588,6 @@
     tabBall.classList.add("positioned");
     if (!animate) {
       requestAnimationFrame(() => tabBall.classList.remove("no-transition"));
-    } else {
-      tabBall.classList.remove("traveling");
-      void tabBall.offsetWidth;       // restart the arc keyframe
-      tabBall.classList.add("traveling");
     }
   }
 
