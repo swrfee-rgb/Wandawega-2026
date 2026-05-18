@@ -72,7 +72,7 @@
     height: 100dvh;         /* dynamic viewport on modern mobile */
     overflow: hidden;
     pointer-events: none;
-    background: #000 url("hero.jpg?v=20250518e") no-repeat;
+    background: #000 url("hero.jpg?v=20250518f") no-repeat;
     background-size: cover;
     background-position: calc(50% - 1vw) center;
   }
@@ -80,7 +80,13 @@
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     object-fit: cover;
-    object-position: calc(50% - 1vw) center;
+    /* Shift the video an extra 1% of its rendered width to the left, on
+       top of the 1vw poster shift. With object-fit: cover and the video's
+       intrinsic AR of 594/1058 ≈ 0.561, the rendered video width is
+       max(container_w, 0.561 × container_h), so 1% of that is
+       max(1cqw, 0.561cqh) — using vw/vh since the container is fixed
+       to the viewport. */
+    object-position: calc(50% - 1vw - max(1vw, 0.561vh)) center;
     display: block;
   }
 
@@ -915,14 +921,14 @@
 <body>
 
 <div class="video-bg" aria-hidden="true">
-  <video autoplay muted loop playsinline preload="auto" poster="hero.jpg?v=20250518e">
-    <source src="hero.mp4?v=20250518e" type="video/mp4">
+  <video autoplay muted loop playsinline preload="auto" poster="hero.jpg?v=20250518f">
+    <source src="hero.mp4?v=20250518f" type="video/mp4">
   </video>
 </div>
 
 <section class="hero">
   <span id="status-pill" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
-  <img class="brand-logo" src="logo.png?v=20250518e" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
+  <img class="brand-logo" src="logo.png?v=20250518f" alt="Wandawega 2026 Doubles Ping-Pong Tournament">
 </section>
 
 <nav class="tabs" role="tablist">
@@ -1024,7 +1030,7 @@
       <h2>Pair Leagues</h2>
       <button class="primary" id="league-randomize">Randomize pairing</button>
       <button class="danger mt" id="league-clear">Clear pairing</button>
-      <div class="help">Randomly pairs the four offices into two leagues. Paris and San Francisco are kept in separate leagues. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
+      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: the two smaller offices (San Francisco and Paris) are never put in the same league — that would leave the two larger offices stuck together and make the leagues lopsided. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
     </div>
   </section>
 
@@ -1049,8 +1055,8 @@
         <div class="rule">
           <div class="rule-num">3</div>
           <div class="rule-body">
-            <div class="rule-head">San Francisco and Paris play in separate leagues.</div>
-            <p>The pairing is otherwise random, but SF and Paris are always split across the two leagues — never on the same side.</p>
+            <div class="rule-head">Balanced league sizes.</div>
+            <p>The pairing is random, with one guardrail: the two smaller offices never end up in the same league. That would leave the two larger offices stuck on the other side, making one league much deeper than the other. Splitting them keeps the head-counts comparable. In practice today, this means San Francisco and Paris always sit in opposite leagues.</p>
           </div>
         </div>
         <div class="rule">
@@ -1096,9 +1102,10 @@
           </div>
         </details>
         <details class="faq-item">
-          <summary>Can San Francisco and Paris end up in the same league?</summary>
+          <summary>Why are San Francisco and Paris always in different leagues?</summary>
           <div class="faq-body">
-            <p>No. SF and Paris are always placed in separate leagues. The pairing is otherwise random, but those two offices never share a side.</p>
+            <p>It's not about those two offices specifically — it's about keeping the leagues evenly sized. We avoid pairing the two <em>smaller</em> offices in the same league, because that would force the two <em>larger</em> offices into the other one, making one side much deeper than the other.</p>
+            <p>Right now San Francisco and Paris are the two smaller offices, so they end up split across the leagues. The rest of the pairing is random.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -1649,9 +1656,11 @@
 
     document.getElementById("league-randomize").addEventListener("click", () => {
       if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
-      // Constraint: Paris and San Francisco must never share a league.
-      // Place SF first, force Paris into the opposite league, then randomly
-      // distribute the remaining offices one per league. Deterministic — no
+      // Constraint: the two smaller offices (SF + Paris) must never share
+      // a league — that would force the two larger offices into the other
+      // league and leave the head-counts lopsided. Place SF first, force
+      // Paris into the opposite league, then randomly distribute the
+      // remaining offices one per league. Deterministic — no
       // reject-and-retry loop needed.
       const others = fisherYates(OFFICES.filter(o => o !== "San Francisco" && o !== "Paris"));
       const sfLeague    = [ "San Francisco", others[0] ];
