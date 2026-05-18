@@ -351,6 +351,39 @@
     border-color: var(--cyan);
     background: rgba(255, 255, 255, 0.12);
   }
+  /* Office select — matches the glass-pill inputs */
+  select.select {
+    width: 100%; padding: 14px 44px 14px 18px;
+    background: rgba(255, 255, 255, 0.04);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1l5 5 5-5' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    color: var(--text); font-size: 16px;
+    font-family: inherit;
+    outline: none;
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    transition: border-color 0.15s, background-color 0.15s;
+  }
+  select.select:focus { border-color: var(--cyan); }
+  select.select option { background: #1a1a1a; color: #fff; }
+  /* Office grouping in player lists */
+  .office-group + .office-group { margin-top: 18px; }
+  .office-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    color: rgba(255,255,255,0.7);
+    padding-bottom: 6px;
+    margin-bottom: 2px;
+    border-bottom: 1px dashed rgba(255,255,255,0.14);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .office-count { color: rgba(255,255,255,0.45); font-variant-numeric: tabular-nums; }
 
   /* BUTTONS — pills with glass treatment on secondary/danger */
   button.primary, button.secondary, button.danger {
@@ -553,6 +586,13 @@
       <h2>Sign Up</h2>
       <div id="signup-open">
         <input id="signup-name" type="text" placeholder="Your name" maxlength="40" autocomplete="off">
+        <select id="signup-office" class="select mt" aria-label="Office">
+          <option value="" disabled selected>— Pick your office —</option>
+          <option>Chicago</option>
+          <option>San Francisco</option>
+          <option>New York</option>
+          <option>Paris</option>
+        </select>
         <button class="primary mt" id="signup-btn">Add me</button>
         <div class="help">Sign up individually. Players are paired into random doubles teams when the bracket is generated. Sign-ups close automatically at that point.</div>
       </div>
@@ -620,6 +660,7 @@
   // FIREBASE_CONFIG_END
 
   const DEFAULT_PASSCODE = "pingpong2026";
+  const OFFICES = ["Chicago", "San Francisco", "New York", "Paris"];
 
   // Studio Gang people → portrait photo lookup. Regenerate by re-running
   // /tmp/sg_parser.py against an updated copy of https://studiogang.com/people/
@@ -814,12 +855,15 @@
     });
 
     const nameInput = document.getElementById("signup-name");
+    const officeSel = document.getElementById("signup-office");
     document.getElementById("signup-btn").addEventListener("click", signUp);
     nameInput.addEventListener("keydown", e => { if (e.key === "Enter") signUp(); });
 
     function signUp() {
       const raw = (nameInput.value || "").trim();
+      const office = officeSel.value;
       if (!raw) return toast("Enter your name", true);
+      if (!office) return toast("Pick your office", true);
       if (raw.length > 40) return toast("Name too long", true);
       if (state.bracket) return toast("Sign-ups closed", true);
       const lower = raw.toLowerCase();
@@ -827,12 +871,13 @@
         curr = curr || {};
         for (const k in curr) if ((curr[k].name || "").toLowerCase() === lower) return;
         const id = "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
-        curr[id] = { name: raw, addedAt: firebase.database.ServerValue.TIMESTAMP };
+        curr[id] = { name: raw, office, addedAt: firebase.database.ServerValue.TIMESTAMP };
         return curr;
       }, (err, committed) => {
         if (err) return toast("Sign-up failed", true);
         if (!committed) return toast("That name's already in", true);
         nameInput.value = "";
+        officeSel.selectedIndex = 0;
         toast("You're in — good luck!");
       });
     }
@@ -846,12 +891,18 @@
       document.getElementById("signup-count").textContent = players.length;
       list.innerHTML = "";
       if (!players.length) { list.innerHTML = '<div class="empty">No one signed up yet.</div>'; return; }
-      players.forEach(p => {
-        const row = document.createElement("div");
-        row.className = "player-row";
-        row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div>`;
-        list.appendChild(row);
-      });
+      for (const { office, players: group } of groupByOffice(players)) {
+        const section = document.createElement("div");
+        section.className = "office-group";
+        section.innerHTML = `<div class="office-head"><span>${escapeHtml(office)}</span><span class="office-count">${group.length}</span></div>`;
+        for (const p of group) {
+          const row = document.createElement("div");
+          row.className = "player-row";
+          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div>`;
+          section.appendChild(row);
+        }
+        list.appendChild(section);
+      }
     }
 
     const adminLocked = document.getElementById("admin-locked");
@@ -911,17 +962,23 @@
       document.getElementById("admin-count").textContent = players.length;
       list.innerHTML = "";
       if (!players.length) { list.innerHTML = '<div class="empty">No players yet.</div>'; return; }
-      players.forEach(p => {
-        const row = document.createElement("div");
-        row.className = "player-row";
-        row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
-        row.querySelector("button").addEventListener("click", () => {
-          if (state.bracket) return toast("Can't remove — reset bracket first.", true);
-          if (!confirm(`Remove ${p.name}?`)) return;
-          db.ref("players/" + p.id).remove();
-        });
-        list.appendChild(row);
-      });
+      for (const { office, players: group } of groupByOffice(players)) {
+        const section = document.createElement("div");
+        section.className = "office-group";
+        section.innerHTML = `<div class="office-head"><span>${escapeHtml(office)}</span><span class="office-count">${group.length}</span></div>`;
+        for (const p of group) {
+          const row = document.createElement("div");
+          row.className = "player-row";
+          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
+          row.querySelector("button").addEventListener("click", () => {
+            if (state.bracket) return toast("Can't remove — reset bracket first.", true);
+            if (!confirm(`Remove ${p.name}?`)) return;
+            db.ref("players/" + p.id).remove();
+          });
+          section.appendChild(row);
+        }
+        list.appendChild(section);
+      }
     }
 
     function renderBracketStats() {
@@ -1062,8 +1119,18 @@
 
     function playerArray() {
       return Object.entries(state.players || {})
-        .map(([id, v]) => ({ id, name: v.name, addedAt: v.addedAt || 0 }))
+        .map(([id, v]) => ({ id, name: v.name, office: v.office || "", addedAt: v.addedAt || 0 }))
         .sort((a, b) => (a.addedAt || 0) - (b.addedAt || 0));
+    }
+    function groupByOffice(players) {
+      const groups = {};
+      for (const p of players) {
+        const key = OFFICES.includes(p.office) ? p.office : "Unassigned";
+        (groups[key] = groups[key] || []).push(p);
+      }
+      const order = OFFICES.filter(o => groups[o]);
+      if (groups["Unassigned"]) order.push("Unassigned");
+      return order.map(office => ({ office, players: groups[office] }));
     }
   }
 
