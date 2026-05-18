@@ -1201,13 +1201,13 @@
       <h2>Pair Leagues</h2>
       <button class="primary" id="league-randomize">Randomize pairing</button>
       <button class="danger mt" id="league-clear">Clear pairing</button>
-      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: the two smaller offices (San Francisco and Paris) are never put in the same league — that would leave the two larger offices stuck together and make the leagues lopsided. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
+      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: the two smaller offices (San Francisco and Paris) are never put in the same league — that would leave the two larger offices stuck together and make the leagues lopsided. Once a pairing exists, the bracket will only pair teammates from within the same league, and every Round 1 match is drawn as one team from each league.</div>
     </div>
   </section>
 
   <section id="tab-rules" hidden>
     <div class="panel">
-      <h2>How It Works</h2>
+      <h2>Part 1 — Pre-selection</h2>
       <div class="rules">
         <div class="rule">
           <div class="rule-num">1</div>
@@ -1254,6 +1254,54 @@
         </div>
       </div>
     </div>
+
+    <div class="panel">
+      <h2>Part 2 — Match Day</h2>
+      <div class="rules">
+        <div class="rule">
+          <div class="rule-num">1</div>
+          <div class="rule-body">
+            <div class="rule-head">Random doubles teams.</div>
+            <p>At the tournament, each league's eight players are randomly paired into four doubles teams — so eight teams in total enter the bracket.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">2</div>
+          <div class="rule-body">
+            <div class="rule-head">Single-elimination bracket.</div>
+            <p>Win and move on, lose and you're out. Four matches in the first round, two in the semis, one final — straight to the trophy.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">3</div>
+          <div class="rule-body">
+            <div class="rule-head">Cross-league first round.</div>
+            <p>The bracket is drawn so that <em>every first-round match</em> is one team from one league against a team from the other — teams from the same league never face off in Round 1. Intra-league matchups only become possible from the semifinals onward.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">4</div>
+          <div class="rule-body">
+            <div class="rule-head">11 points, best of 3.</div>
+            <p>Every match is a best-of-3. A game goes to the first team to reach <strong>11 points</strong>, and must be won by a 2-point margin — at 10–10 you keep playing until one team leads by two.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">5</div>
+          <div class="rule-body">
+            <div class="rule-head">Serve every 2 points.</div>
+            <p>Olympic-style service. The right to serve passes to the other team after every two points are played, regardless of who scored them. (At 10–10 and beyond, the serve switches after every <em>single</em> point.)</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">6</div>
+          <div class="rule-body">
+            <div class="rule-head">Champion lifts the trophy — for the league.</div>
+            <p>The team that wins the final takes home the trophy <em>and</em> brings their league the win for the year. Two offices share the bragging rights; one team gets the silverware.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section id="tab-faq" hidden>
@@ -1289,6 +1337,13 @@
           <summary>Can I pick my own doubles partner?</summary>
           <div class="faq-body">
             <p>No. Teams are formed by random pairing within each league when the bracket is generated. This keeps things fair and shakes up the matchups across offices.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>What's the match format on tournament day?</summary>
+          <div class="faq-body">
+            <p>Single-elimination doubles. Every match is a best-of-3, with each game played to <strong>11 points</strong> (win by 2). Service swaps every 2 points, Olympic-style — and after 10–10 it swaps every point.</p>
+            <p>The bracket is also drawn so that every Round 1 match is one team from one league against a team from the other; intra-league matchups only become possible from the semifinals onward.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -2526,15 +2581,19 @@
   function generateBracket(players, leagues) {
     // 1. Randomly pair players into doubles teams.
     //    If leagues are set, only pair within each league (no cross-league teams).
-    const teams = [];
-    const pairUp = (arr) => {
+    const allTeams = [];
+    const teamsByLeague = { A: [], B: [] };
+    const pairUp = (arr, leagueKey) => {
       const sh = fisherYates(arr);
       for (let i = 0; i + 1 < sh.length; i += 2) {
         const a = sh[i], b = sh[i + 1];
-        teams.push({ ids: [a.id, b.id], names: [a.name, b.name] });
+        const team = { ids: [a.id, b.id], names: [a.name, b.name] };
+        if (leagueKey) teamsByLeague[leagueKey].push(team);
+        allTeams.push(team);
       }
     };
-    if (leagues && leagues.A && leagues.B) {
+    const hasLeagues = !!(leagues && leagues.A && leagues.B);
+    if (hasLeagues) {
       const o2l = officeToLeagueMap(leagues);
       const byLeague = { A: [], B: [] };
       for (const p of players) {
@@ -2542,21 +2601,62 @@
         if (lg) byLeague[lg].push(p);
         // players whose office isn't in any league are skipped
       }
-      pairUp(byLeague.A);
-      pairUp(byLeague.B);
+      pairUp(byLeague.A, "A");
+      pairUp(byLeague.B, "B");
     } else {
-      pairUp(players);
+      pairUp(players, null);
     }
 
-    // 2. Shuffle teams so their bracket order is also random.
-    const shuffled = fisherYates(teams);
-    const size = nextPow2(shuffled.length);
-    const numByes = size - shuffled.length;
+    // 2. Lay teams into the bracket. When leagues exist, round 1
+    //    must be all cross-league: every real (non-bye) first-round
+    //    match pairs one League-A team with one League-B team.
+    //    Intra-league matchups are only possible from round 2 onward.
+    const size = nextPow2(allTeams.length);
+    const numByes = size - allTeams.length;
+    const numRealMatches = size / 2 - numByes;
     const slots = new Array(size).fill(null);
-    let pi = 0;
-    for (let b = 0; b < numByes; b++) { slots[b * 2] = shuffled[pi++]; }
-    let slotIdx = numByes * 2;
-    while (pi < shuffled.length) slots[slotIdx++] = shuffled[pi++];
+
+    if (hasLeagues && teamsByLeague.A.length && teamsByLeague.B.length) {
+      const a = fisherYates(teamsByLeague.A.slice());
+      const b = fisherYates(teamsByLeague.B.slice());
+      const crossMatches = [];
+      // Build as many cross-league pairs as possible (capped by the
+      // smaller league and by the number of real matches needed).
+      const maxCross = Math.min(a.length, b.length, numRealMatches);
+      for (let i = 0; i < maxCross; i++) {
+        const aT = a.pop(), bT = b.pop();
+        crossMatches.push(Math.random() < 0.5 ? [aT, bT] : [bT, aT]);
+      }
+      // Any remaining real matches must come from the league that
+      // still has surplus teams — these are unavoidable intra-league
+      // matchups (only happens when one league has many more teams
+      // than the other; with 4+4 it never does).
+      const intraMatches = [];
+      let remainingReal = numRealMatches - crossMatches.length;
+      const extras = a.length > 0 ? a : b;
+      while (remainingReal > 0 && extras.length >= 2) {
+        intraMatches.push([extras.pop(), extras.pop()]);
+        remainingReal--;
+      }
+      // Whatever's left over from each league gets a bye in round 1.
+      const byeTeams = fisherYates([...a, ...b]);
+      const realMatches = fisherYates([...crossMatches, ...intraMatches]);
+      // Place byes in even slots (paired with null), then real matches
+      // sequentially after them — mirrors the original layout.
+      for (let i = 0; i < numByes; i++) slots[i * 2] = byeTeams[i];
+      let slotIdx = numByes * 2;
+      for (const [t1, t2] of realMatches) {
+        slots[slotIdx++] = t1;
+        slots[slotIdx++] = t2;
+      }
+    } else {
+      // No leagues defined — fall back to plain random placement.
+      const shuffled = fisherYates(allTeams);
+      let pi = 0;
+      for (let b = 0; b < numByes; b++) slots[b * 2] = shuffled[pi++];
+      let slotIdx = numByes * 2;
+      while (pi < shuffled.length) slots[slotIdx++] = shuffled[pi++];
+    }
 
     const numRounds = Math.log2(size);
     const rounds = [];
