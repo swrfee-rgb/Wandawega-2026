@@ -530,6 +530,78 @@
   }
   .rule-eg em { color: var(--cyan); font-style: normal; font-weight: 600; letter-spacing: 0.04em; }
 
+  /* LEAGUE TAB — two side-by-side league cards */
+  .league-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 14px; align-items: stretch;
+    margin-top: 4px;
+  }
+  .league-card {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.16);
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+  }
+  .league-card.league-a {
+    border-color: rgba(42, 214, 238, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 18px rgba(42, 214, 238, 0.18);
+  }
+  .league-card.league-b {
+    border-color: rgba(255, 180, 90, 0.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 18px rgba(255, 180, 90, 0.18);
+  }
+  .league-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .league-tag {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .league-a .league-tag { color: var(--cyan); }
+  .league-b .league-tag { color: #ffb45a; }
+  .league-total {
+    font-size: 18px; font-weight: 700; color: #fff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .league-total-lbl {
+    font-size: 9px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    color: rgba(255,255,255,0.6);
+    margin-left: 2px;
+  }
+  .league-offices { display: flex; flex-direction: column; gap: 6px; }
+  .league-office {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,0.92);
+  }
+  .league-office-count {
+    font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,0.6);
+    font-variant-numeric: tabular-nums;
+  }
+  .league-vs {
+    align-self: center;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.24em;
+    color: rgba(255,255,255,0.55);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  @media (max-width: 520px) {
+    .league-grid { grid-template-columns: 1fr; }
+    .league-vs { padding: 2px 0; }
+  }
+
   /* BUTTONS — pills with glass treatment on secondary/danger */
   button.primary, button.secondary, button.danger {
     width: 100%; padding: 14px 16px;
@@ -705,6 +777,7 @@
 <nav class="tabs" role="tablist">
   <button class="active" data-tab="bracket">Bracket</button>
   <button data-tab="signup">Sign Up</button>
+  <button data-tab="league">League</button>
   <button data-tab="rules">Rules</button>
   <button data-tab="admin" class="tab-right">Admin</button>
 </nav>
@@ -783,6 +856,19 @@
         <button class="secondary mt" id="admin-savepass">Change passcode</button>
         <button class="secondary mt" id="admin-lock">Lock admin</button>
       </div>
+    </div>
+  </section>
+
+  <section id="tab-league" hidden>
+    <div class="panel">
+      <h2>Leagues</h2>
+      <div id="league-mount"></div>
+    </div>
+    <div class="panel" id="league-admin-panel" hidden>
+      <h2>Pair Leagues</h2>
+      <button class="primary" id="league-randomize">Randomize pairing</button>
+      <button class="danger mt" id="league-clear">Clear pairing</button>
+      <div class="help">Randomly pairs the four offices into two leagues. Once a pairing exists, the bracket will only pair teammates from within the same league.</div>
     </div>
   </section>
 
@@ -1132,6 +1218,7 @@
   const sections = {
     bracket: document.getElementById("tab-bracket"),
     signup: document.getElementById("tab-signup"),
+    league: document.getElementById("tab-league"),
     admin: document.getElementById("tab-admin"),
     rules: document.getElementById("tab-rules")
   };
@@ -1167,17 +1254,21 @@
       statusText.textContent = live ? "Live" : "Offline";
     });
 
-    let state = { players: {}, bracket: null, passcode: DEFAULT_PASSCODE };
+    let state = { players: {}, bracket: null, leagues: null, passcode: DEFAULT_PASSCODE };
     let adminUnlocked = false;
 
     db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
     db.ref("players").on("value", s => {
       state.players = s.val() || {};
-      renderSignup(); renderAdminPlayers(); renderBracketStats();
+      renderSignup(); renderAdminPlayers(); renderBracketStats(); renderLeagues();
     });
     db.ref("bracket").on("value", s => {
       state.bracket = s.val() || null;
       renderBracket(); renderBracketStats(); renderSignup();
+    });
+    db.ref("leagues").on("value", s => {
+      state.leagues = s.val() || null;
+      renderLeagues();
     });
 
     const nameInput = document.getElementById("signup-name");
@@ -1309,7 +1400,7 @@
         adminLocked.hidden = true;
         adminPanel.hidden = false;
         document.getElementById("admin-pass").value = "";
-        renderAdminPlayers(); renderBracket();
+        renderAdminPlayers(); renderBracket(); renderLeagues();
         toast("Admin unlocked");
       } else {
         toast("Wrong passcode", true);
@@ -1322,15 +1413,43 @@
       adminUnlocked = false;
       adminPanel.hidden = true;
       adminLocked.hidden = false;
-      renderBracket();
+      renderBracket(); renderLeagues();
+    });
+
+    document.getElementById("league-randomize").addEventListener("click", () => {
+      if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
+      const shuffled = fisherYates(OFFICES.slice());
+      const payload = {
+        A: { offices: [shuffled[0], shuffled[1]] },
+        B: { offices: [shuffled[2], shuffled[3]] },
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+      };
+      db.ref("leagues").set(payload).then(() => toast("Leagues paired"));
+    });
+    document.getElementById("league-clear").addEventListener("click", () => {
+      if (!state.leagues) return toast("No pairing to clear", true);
+      if (!confirm("Clear the league pairing?")) return;
+      db.ref("leagues").remove().then(() => toast("Pairing cleared"));
     });
 
     document.getElementById("admin-gen").addEventListener("click", () => {
       const players = playerArray();
       if (players.length < 4) return toast("Need at least 4 players (2 teams)", true);
-      if (players.length % 2 !== 0) return toast("Doubles needs an even player count", true);
+      if (state.leagues) {
+        const o2l = officeToLeagueMap(state.leagues);
+        const cnt = { A: 0, B: 0, none: 0 };
+        players.forEach(p => { cnt[o2l[p.office] || "none"]++; });
+        if (cnt.A < 2 || cnt.B < 2) return toast("Each league needs at least 2 players", true);
+        const warn = [];
+        if (cnt.A % 2 !== 0) warn.push("1 player from League A will sit out");
+        if (cnt.B % 2 !== 0) warn.push("1 player from League B will sit out");
+        if (cnt.none > 0) warn.push(`${cnt.none} player(s) in offices outside any league will sit out`);
+        if (warn.length && !confirm(warn.join("\n") + "\n\nContinue?")) return;
+      } else if (players.length % 2 !== 0) {
+        return toast("Doubles needs an even player count", true);
+      }
       if (state.bracket && !confirm("A bracket already exists. Regenerate with fresh random pairings?")) return;
-      const bracket = generateBracket(players);
+      const bracket = generateBracket(players, state.leagues);
       db.ref("bracket").set(bracket).then(() => toast("Bracket generated"));
     });
     document.getElementById("admin-reset").addEventListener("click", () => {
@@ -1374,6 +1493,47 @@
         }
         list.appendChild(section);
       }
+    }
+
+    function renderLeagues() {
+      const mount = document.getElementById("league-mount");
+      const adminPanel = document.getElementById("league-admin-panel");
+      if (!mount) return;
+      adminPanel.hidden = !adminUnlocked;
+
+      const leagues = state.leagues;
+      if (!leagues || !leagues.A || !leagues.B) {
+        mount.innerHTML = `<div class="empty">Leagues haven't been paired yet.<br>An admin can randomly pair the four offices below.</div>`;
+        return;
+      }
+
+      const counts = {};
+      playerArray().forEach(p => { if (p.office) counts[p.office] = (counts[p.office] || 0) + 1; });
+
+      const card = (key, league) => {
+        const offices = asArray(league.offices);
+        const total = offices.reduce((s, o) => s + (counts[o] || 0), 0);
+        const officeRows = offices.map(o => `
+          <div class="league-office">
+            <span>${escapeHtml(o)}</span>
+            <span class="league-office-count">${counts[o] || 0}</span>
+          </div>`).join("");
+        return `
+          <div class="league-card league-${key.toLowerCase()}">
+            <div class="league-head">
+              <span class="league-tag">League ${key}</span>
+              <span class="league-total">${total}<span class="league-total-lbl">${total === 1 ? "player" : "players"}</span></span>
+            </div>
+            <div class="league-offices">${officeRows}</div>
+          </div>`;
+      };
+
+      mount.innerHTML = `
+        <div class="league-grid">
+          ${card("A", leagues.A)}
+          <div class="league-vs">vs</div>
+          ${card("B", leagues.B)}
+        </div>`;
     }
 
     function renderBracketStats() {
@@ -1577,6 +1737,15 @@
 
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
 
+  // Build { officeName: "A" | "B" } from the leagues object.
+  function officeToLeagueMap(leagues) {
+    const m = {};
+    if (!leagues) return m;
+    if (leagues.A && leagues.A.offices) asArray(leagues.A.offices).forEach(o => m[o] = "A");
+    if (leagues.B && leagues.B.offices) asArray(leagues.B.offices).forEach(o => m[o] = "B");
+    return m;
+  }
+
   // Firebase sometimes returns arrays as objects (sparse keys etc.). These
   // helpers normalize the bracket structure so the rest of the code can
   // always treat rounds as a real array of arrays.
@@ -1617,13 +1786,29 @@
     return labels;
   }
 
-  function generateBracket(players) {
+  function generateBracket(players, leagues) {
     // 1. Randomly pair players into doubles teams.
-    const shuffledPlayers = fisherYates(players);
+    //    If leagues are set, only pair within each league (no cross-league teams).
     const teams = [];
-    for (let i = 0; i + 1 < shuffledPlayers.length; i += 2) {
-      const a = shuffledPlayers[i], b = shuffledPlayers[i + 1];
-      teams.push({ ids: [a.id, b.id], names: [a.name, b.name] });
+    const pairUp = (arr) => {
+      const sh = fisherYates(arr);
+      for (let i = 0; i + 1 < sh.length; i += 2) {
+        const a = sh[i], b = sh[i + 1];
+        teams.push({ ids: [a.id, b.id], names: [a.name, b.name] });
+      }
+    };
+    if (leagues && leagues.A && leagues.B) {
+      const o2l = officeToLeagueMap(leagues);
+      const byLeague = { A: [], B: [] };
+      for (const p of players) {
+        const lg = o2l[p.office];
+        if (lg) byLeague[lg].push(p);
+        // players whose office isn't in any league are skipped
+      }
+      pairUp(byLeague.A);
+      pairUp(byLeague.B);
+    } else {
+      pairUp(players);
     }
 
     // 2. Shuffle teams so their bracket order is also random.
