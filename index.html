@@ -351,6 +351,33 @@
     border-color: var(--cyan);
     background: rgba(255, 255, 255, 0.12);
   }
+  /* Name autocomplete dropdown */
+  .name-field { position: relative; }
+  .suggest {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    z-index: 20;
+    background: rgba(20, 22, 28, 0.78);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 18px;
+    overflow: hidden;
+    max-height: 320px; overflow-y: auto;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+  }
+  .suggest-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border: 0; background: transparent;
+    width: 100%; text-align: left;
+    color: var(--text); font-family: inherit; font-size: 15px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .suggest-row:last-child { border-bottom: 0; }
+  .suggest-row:hover, .suggest-row.active { background: rgba(255,255,255,0.08); }
+  .suggest-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .suggest-row mark { color: var(--cyan); background: transparent; font-weight: 600; }
   /* Office select — matches the glass-pill inputs */
   select.select {
     width: 100%; padding: 14px 44px 14px 18px;
@@ -585,7 +612,10 @@
     <div class="panel">
       <h2>Sign Up</h2>
       <div id="signup-open">
-        <input id="signup-name" type="text" placeholder="Your name" maxlength="40" autocomplete="off">
+        <div class="name-field">
+          <input id="signup-name" type="text" placeholder="Your name" maxlength="40" autocomplete="off" spellcheck="false">
+          <div id="signup-suggestions" class="suggest" hidden></div>
+        </div>
         <select id="signup-office" class="select mt" aria-label="Office">
           <option value="" disabled selected>— Pick your office —</option>
           <option>Chicago</option>
@@ -794,6 +824,138 @@
     "zoe small": "https://studiogang.com/wp-content/uploads/Zoe-Small_web-210x263.jpg"
   };
 
+  // Original-cased display names — keyed the same way as PEOPLE_PHOTOS.
+  // Used to suggest full names while signing up (accents and nicknames intact).
+  const PEOPLE_NAMES = {
+    "aj rosales": "AJ Rosales",
+    "alan huang": "Alan Huang",
+    "alex girovich": "Alex Girovich",
+    "alfred klopper": "Alfred Klopper",
+    "alissa anderson": "Alissa Anderson",
+    "amy lawlor": "Amy Lawlor",
+    "ana fernandez moraleda": "Ana Fernandez Moraleda",
+    "ana flor": "Ana Flor",
+    "ana maksin": "Ana Maksin",
+    "ana sotelo": "Ana Sotelo",
+    "andi altenbach": "Andi Altenbach",
+    "andrea rovetta": "Andrea Rovetta",
+    "angela peckham": "Angela Peckham",
+    "anika schwarzwald": "Anika Schwarzwald",
+    "anissa le scornet": "Anissa Le Scornet",
+    "anne-virginie sala": "Anne-Virginie Sala",
+    "aria griffin": "Aria Griffin",
+    "arthur liu": "Arthur Liu",
+    "arty vartanyan": "Arty Vartanyan",
+    "aurelien tsemo": "Aurelien Tsemo",
+    "austin chod": "Austin Chod",
+    "austin sun": "Austin Sun",
+    "bella adekoya": "Bella Adekoya",
+    "bethany mahre": "Bethany Mahre",
+    "bonny yau": "Bonny Yau",
+    "brandon townsend": "Brandon Townsend",
+    "brian hartman": "Brian Hartman",
+    "bryan scheib": "Bryan Scheib",
+    "caleb fisher": "Caleb Fisher",
+    "cara connelly gilbert": "Cara Connelly Gilbert",
+    "caroline acheatel": "Caroline Acheatel",
+    "carolyn brunsen junk": "Carolyn Brunsen Junk",
+    "cassie dickson": "Cassie Dickson",
+    "charles curran": "Charles Curran",
+    "chris bennett": "Chris Bennett",
+    "claire cahan": "Claire Cahan",
+    "colleen lyell": "Colleen Lyell",
+    "corbin keech": "Corbin Keech",
+    "courtney arabea": "Courtney Arabea",
+    "danny graham": "Danny Graham",
+    "david swain": "David Swain",
+    "davis butner": "Davis Butner",
+    "diana aguilar": "Diana Aguilar",
+    "dylan king": "Dylan King",
+    "efi orfanou": "Efi Orfanou",
+    "enrique orts costa": "Enrique Orts Costa",
+    "eric zuckerman": "Eric Zuckerman",
+    "evan wermers": "Evan Wermers",
+    "florencia kratsman": "Florencia Kratsman",
+    "francesca johanson": "Francesca Johanson",
+    "gregg garmisa": "Gregg Garmisa",
+    "haoxiang yang": "Haoxiang Yang",
+    "jason flores": "Jason Flores",
+    "jay hoffman": "Jay Hoffman",
+    "jeanne gang": "Jeanne Gang",
+    "jeff jang": "Jeff Jang",
+    "jemma liu": "Jemma Liu",
+    "jennifer simon": "Jennifer Simon",
+    "jill mediatore": "Jill Mediatore",
+    "jing chen-joyeux": "Jing Chen-Joyeux",
+    "joan verbon": "Joan Verbon",
+    "joe burns": "Joe Burns",
+    "john paul rysavy": "John Paul Rysavy",
+    "jonathan chamblee": "Jonathan Chamblee",
+    "jonathan izen": "Jonathan Izen",
+    "josh ellman": "Josh Ellman",
+    "julcsi futo": "Julcsi Futo",
+    "julia roberts": "Julia Roberts",
+    "juliane wolf": "Juliane Wolf",
+    "julio alberto cedano": "Julio Alberto Cedano",
+    "kariane jeaurond": "Kariane Jeaurond",
+    "karina encarnacion": "Karina Encarnación",
+    "kristina eldrenkamp": "Kristina Eldrenkamp",
+    "lara kaufman": "Lara Kaufman",
+    "laura ettedgui": "Laura Ettedgui",
+    "laura haak": "Laura Haak",
+    "leia gorra": "Leia Gorra",
+    "liao he": "Liao He",
+    "lindsey lasiewicz": "Lindsey Lasiewicz",
+    "lingyi tseng": "Lingyi Tseng",
+    "liza myroshnychenko": "Liza Myroshnychenko",
+    "luis medina": "Luis Medina",
+    "luis tejeda": "Luis Tejeda",
+    "lydia link": "Lydia Link",
+    "mae smith": "Mae Smith",
+    "magda wala": "Magda Wala",
+    "mark schendel": "Mark Schendel",
+    "mark wilkins": "Mark Wilkins",
+    "marylynn antaki": "Marylynn Antaki",
+    "mauricio sanchez": "Mauricio Sánchez",
+    "meghan jones": "Meghan Jones",
+    "micheal nham": "Micheal Nham",
+    "molly kinsella": "Molly Kinsella",
+    "neha harish": "Neha Harish",
+    "ola kusznerko": "Ola Kusznerko",
+    "patricia duenas gerritsen": "Patricia Dueñas Gerritsen",
+    "paul aanonsen": "Paul Aanonsen",
+    "philipp farana": "Philipp Farana",
+    "rhea partisala": "Rhea Partisala",
+    "riley cowing": "Riley Cowing",
+    "rodia valladares": "Rodia Valladares",
+    "sangwon kim": "Sangwon Kim",
+    "sarah athena beauchamp evdokias": "Sarah Athena Beauchamp Evdokias",
+    "schuyler smith": "Schuyler Smith",
+    "seanna walsh": "Seanna Walsh",
+    "shunfan zheng": "Shunfan Zheng",
+    "shuping liu": "Shuping Liu",
+    "sok-man cheung": "Sok-Man Cheung",
+    "steve wiesenthal": "Steve Wiesenthal",
+    "steven meyer": "Steven Meyer",
+    "teo quintana": "Teo Quintana",
+    "terrence chew": "Terrence Chew",
+    "thorsten johann": "Thorsten Johann",
+    "tim gersten": "Tim Gersten",
+    "todd hogan": "Todd Hogan",
+    "tristan schendel": "Tristan Schendel",
+    "vincent bizot": "Vincent Bizot",
+    "violante piccolomini": "Violante Piccolomini",
+    "vitor oliveira": "Vitor Oliveira",
+    "weiju juju lai": "Weiju \"Juju\" Lai",
+    "wen zhou": "Wen Zhou",
+    "weston walker": "Weston Walker",
+    "will hansen": "Will Hansen",
+    "william emmick": "William Emmick",
+    "zandra neely": "Zandra Neely",
+    "zihao wei": "Zihao Wei",
+    "zoe small": "Zoë Small"
+  };
+
   const configured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
   if (!configured) document.getElementById("config-warn").hidden = false;
 
@@ -856,8 +1018,77 @@
 
     const nameInput = document.getElementById("signup-name");
     const officeSel = document.getElementById("signup-office");
+    const suggestBox = document.getElementById("signup-suggestions");
     document.getElementById("signup-btn").addEventListener("click", signUp);
-    nameInput.addEventListener("keydown", e => { if (e.key === "Enter") signUp(); });
+
+    // Autocomplete suggestions sourced from PEOPLE_NAMES.
+    const PEOPLE_LIST = Object.keys(PEOPLE_NAMES).map(key => ({
+      key,
+      name: PEOPLE_NAMES[key]
+    }));
+    let suggestActive = -1;
+
+    function highlightMatch(name, q) {
+      if (!q) return escapeHtml(name);
+      const safeName = escapeHtml(name);
+      const safeQ = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        return safeName.replace(new RegExp("(" + safeQ + ")", "i"), "<mark>$1</mark>");
+      } catch { return safeName; }
+    }
+    function renderSuggestions() {
+      const raw = (nameInput.value || "").trim();
+      const norm = normalizeName(raw);
+      if (!norm) { suggestBox.hidden = true; suggestBox.innerHTML = ""; suggestActive = -1; return; }
+      const taken = new Set(playerArray().map(p => normalizeName(p.name)));
+      const tokens = norm.split(/\s+/).filter(Boolean);
+      const matches = PEOPLE_LIST.filter(p => {
+        if (taken.has(p.key)) return false;
+        return tokens.every(t => p.key.includes(t));
+      }).slice(0, 8);
+      if (!matches.length) { suggestBox.hidden = true; suggestBox.innerHTML = ""; suggestActive = -1; return; }
+      suggestBox.innerHTML = matches.map((p, i) =>
+        `<button type="button" class="suggest-row${i === suggestActive ? " active" : ""}" data-name="${escapeHtml(p.name)}">${avatarHtml(p.name, "sm")}<span class="nm">${highlightMatch(p.name, raw)}</span></button>`
+      ).join("");
+      suggestBox.hidden = false;
+    }
+    function pickSuggestion(name) {
+      nameInput.value = name;
+      suggestBox.hidden = true;
+      suggestBox.innerHTML = "";
+      suggestActive = -1;
+      officeSel.focus();
+    }
+    nameInput.addEventListener("input", renderSuggestions);
+    nameInput.addEventListener("focus", renderSuggestions);
+    nameInput.addEventListener("blur", () => setTimeout(() => { suggestBox.hidden = true; }, 150));
+    nameInput.addEventListener("keydown", e => {
+      const rows = Array.from(suggestBox.querySelectorAll(".suggest-row"));
+      if (e.key === "Enter") {
+        if (!suggestBox.hidden && suggestActive >= 0 && rows[suggestActive]) {
+          e.preventDefault();
+          pickSuggestion(rows[suggestActive].dataset.name);
+        } else {
+          signUp();
+        }
+      } else if (e.key === "ArrowDown" && !suggestBox.hidden && rows.length) {
+        e.preventDefault();
+        suggestActive = (suggestActive + 1) % rows.length;
+        rows.forEach((r, i) => r.classList.toggle("active", i === suggestActive));
+      } else if (e.key === "ArrowUp" && !suggestBox.hidden && rows.length) {
+        e.preventDefault();
+        suggestActive = (suggestActive - 1 + rows.length) % rows.length;
+        rows.forEach((r, i) => r.classList.toggle("active", i === suggestActive));
+      } else if (e.key === "Escape") {
+        suggestBox.hidden = true; suggestActive = -1;
+      }
+    });
+    suggestBox.addEventListener("mousedown", e => {
+      const btn = e.target.closest(".suggest-row");
+      if (!btn) return;
+      e.preventDefault();
+      pickSuggestion(btn.dataset.name);
+    });
 
     function signUp() {
       const raw = (nameInput.value || "").trim();
