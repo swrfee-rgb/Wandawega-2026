@@ -1049,12 +1049,19 @@
         <div class="rule">
           <div class="rule-num">3</div>
           <div class="rule-body">
+            <div class="rule-head">San Francisco and Paris play in separate leagues.</div>
+            <p>The pairing is otherwise random, but SF and Paris are always split across the two leagues — never on the same side.</p>
+          </div>
+        </div>
+        <div class="rule">
+          <div class="rule-num">4</div>
+          <div class="rule-body">
             <div class="rule-head">Eight per league.</div>
             <p>Each league fields eight players at the tournament. The winning league earns the bragging rights — and honour — of its two offices.</p>
           </div>
         </div>
         <div class="rule">
-          <div class="rule-num">4</div>
+          <div class="rule-num">5</div>
           <div class="rule-body">
             <div class="rule-head">Proportional quotas.</div>
             <p>Each office's share of its league's eight seats scales with how many of its people signed up.</p>
@@ -1062,7 +1069,7 @@
           </div>
         </div>
         <div class="rule">
-          <div class="rule-num">5</div>
+          <div class="rule-num">6</div>
           <div class="rule-body">
             <div class="rule-head">Gamemaster picks the roster.</div>
             <p>When an office has more sign-ups than its quota, the office's <em>gamemaster</em> decides who plays — through an office-wide sub-match, a lottery, or any other method — and logs the final roster by <strong>July 31, 2026</strong>.</p>
@@ -1086,6 +1093,12 @@
           <summary>How are doubles teams paired?</summary>
           <div class="faq-body">
             <p>Once sign-ups close, the four offices are split into two leagues — each league joins two offices as one. Players are then paired into random doubles teams within their league when the bracket is generated.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Can San Francisco and Paris end up in the same league?</summary>
+          <div class="faq-body">
+            <p>No. SF and Paris are always placed in separate leagues. The pairing is otherwise random, but those two offices never share a side.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -1637,15 +1650,16 @@
     document.getElementById("league-randomize").addEventListener("click", () => {
       if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
       // Constraint: Paris and San Francisco must never share a league.
-      let shuffled;
-      for (let tries = 0; tries < 50; tries++) {
-        shuffled = fisherYates(OFFICES.slice());
-        const a = new Set(shuffled.slice(0, 2));
-        if (!(a.has("Paris") && a.has("San Francisco"))) break;
-      }
+      // Place SF first, force Paris into the opposite league, then randomly
+      // distribute the remaining offices one per league. Deterministic — no
+      // reject-and-retry loop needed.
+      const others = fisherYates(OFFICES.filter(o => o !== "San Francisco" && o !== "Paris"));
+      const sfLeague    = [ "San Francisco", others[0] ];
+      const parisLeague = [ "Paris",         others[1] ];
+      const leagues = fisherYates([ sfLeague, parisLeague ]);
       const payload = {
-        A: { offices: [shuffled[0], shuffled[1]] },
-        B: { offices: [shuffled[2], shuffled[3]] },
+        A: { offices: leagues[0] },
+        B: { offices: leagues[1] },
         createdAt: firebase.database.ServerValue.TIMESTAMP
       };
       db.ref("leagues").set(payload).then(() => toast("Leagues paired"));
