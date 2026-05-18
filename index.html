@@ -267,8 +267,9 @@
     border-bottom: 1px dashed rgba(255,255,255,0.12);
     margin-bottom: 4px;
   }
-  /* Up Next — highlighted cyan glow, slow pulse */
-  .match.in-next-up {
+  /* Up Next — actionable matches get a cyan glow + pulse no matter
+     which round section they sit in */
+  .match.match-ready {
     border-color: rgba(15, 191, 217, 0.85);
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.4),
@@ -276,17 +277,16 @@
       0 8px 28px rgba(15, 191, 217, 0.35);
     animation: nextUpPulse 2.4s ease-in-out infinite;
   }
-  .match.in-next-up .match-tag { color: var(--cyan); border-bottom-color: rgba(15, 191, 217, 0.35); }
+  .match.match-ready .match-tag { color: var(--cyan); border-bottom-color: rgba(15, 191, 217, 0.35); }
   @keyframes nextUpPulse {
     0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(15, 191, 217, 0.4), 0 6px 22px rgba(15, 191, 217, 0.28); }
     50%      { box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(15, 191, 217, 0.7), 0 10px 32px rgba(15, 191, 217, 0.45); }
   }
-  @media (prefers-reduced-motion: reduce) { .match.in-next-up { animation: none; } }
-  /* Completed — dim */
-  .match.in-completed { opacity: 0.55; }
-  /* Section heads styled by parent */
-  .round.next-up .round-head span:first-child { color: var(--cyan); }
-  .round.completed { margin-top: 24px; }
+  @media (prefers-reduced-motion: reduce) { .match.match-ready { animation: none; } }
+  .match.match-done { opacity: 0.55; }
+  /* Round section that has actionable matches — small accent on the heading */
+  .round.round-active .round-head span:first-child { color: var(--cyan); }
+  .round.round-done { margin-top: 24px; opacity: 0.85; }
   .slot {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 0;
@@ -964,35 +964,33 @@
       }
       const labels = roundLabels(rounds.length);
       const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
-
-      // Flatten all matches and bucket by status so unplayed surface to the top.
-      const upNext = [], upcoming = [], completed = [];
-      for (let r = 0; r < rounds.length; r++) {
-        for (let m = 0; m < rounds[r].length; m++) {
-          const match = rounds[r][m];
-          const item = { match, r, m, roundLabel: labels[r], prevLabel: labels[r - 1] };
-          if (match.winnerSlot) completed.push(item);
-          else if (teamReady(match.t1Ids) && teamReady(match.t2Ids)) upNext.push(item);
-          else upcoming.push(item);
-        }
-      }
-      // Within "Up Next" surface earlier rounds first (semis before final). Within
-      // "Completed" show most recent first so the latest result is on top.
-      upNext.sort((a, b) => a.r - b.r || a.m - b.m);
-      upcoming.sort((a, b) => a.r - b.r || a.m - b.m);
-      completed.sort((a, b) => b.r - a.r || b.m - a.m);
-
-      const sectionHtml = (title, items, cls) => {
-        if (!items.length) return "";
-        const count = items.length;
-        const matchesHtml = items.map(it => matchHtml(it.match, it.r, it.m, it.prevLabel, it.roundLabel, cls)).join("");
-        return `<div class="round ${cls}"><div class="round-head"><span>${title}</span><span>${count} match${count === 1 ? "" : "es"}</span></div>${matchesHtml}</div>`;
+      const matchState = (m) => m.winnerSlot ? 2 : (teamReady(m.t1Ids) && teamReady(m.t2Ids) ? 0 : 1);
+      const roundActivity = (matches) => {
+        if (matches.some(m => matchState(m) === 0)) return 0;       // has actionable match
+        if (matches.every(m => matchState(m) === 2)) return 2;      // every match done
+        return 1;                                                    // waiting on feeder
       };
 
-      mount.innerHTML =
-        sectionHtml("Up Next", upNext, "next-up") +
-        sectionHtml("Upcoming", upcoming, "upcoming") +
-        sectionHtml("Completed", completed, "completed");
+      // Round-based sections, but reorder rounds: actionable first, completed last.
+      const ordered = rounds.map((matches, r) => ({ r, label: labels[r], matches }))
+                            .sort((a, b) => roundActivity(a.matches) - roundActivity(b.matches) || a.r - b.r);
+
+      let html = "";
+      for (const { r, label, matches } of ordered) {
+        // Within a round, surface actionable matches above waiting ones above completed.
+        const sorted = matches
+          .map((m, origIdx) => ({ m, origIdx }))
+          .sort((a, b) => matchState(a.m) - matchState(b.m) || a.origIdx - b.origIdx);
+
+        const activity = roundActivity(matches);
+        const roundCls = activity === 0 ? "active" : activity === 2 ? "done" : "waiting";
+        html += `<div class="round round-${roundCls}"><div class="round-head"><span>${label}</span><span>${matches.length} match${matches.length === 1 ? "" : "es"}</span></div>`;
+        for (const { m, origIdx } of sorted) {
+          html += matchHtml(m, r, origIdx, labels[r - 1], label);
+        }
+        html += `</div>`;
+      }
+      mount.innerHTML = html;
 
       mount.querySelectorAll("button.pick").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -1002,12 +1000,11 @@
       });
     }
 
-    function matchHtml(match, r, m, prevLabel, roundLabel, sectionCls) {
+    function matchHtml(match, r, m, prevLabel, roundLabel) {
       const winnerSlot = match.winnerSlot;
       const teamReady = (ids) => Array.isArray(ids) && ids.length === 2 && ids[0] && ids[1];
       const bothReady = teamReady(match.t1Ids) && teamReady(match.t2Ids);
       const stateCls = winnerSlot ? "match-done" : (bothReady ? "match-ready" : "match-waiting");
-      const matchCls = `match ${stateCls}` + (sectionCls ? ` in-${sectionCls}` : "");
       const placeholder = (slotKey) => {
         if (r === 0) return "— bye —";
         const feederMatch = (slotKey === "t1" ? m * 2 : m * 2 + 1) + 1;
@@ -1029,7 +1026,7 @@
         return `<div class="slot ${cls}"><div class="slot-info">${avatars}<span class="nm">${escapeHtml(teamName)}</span></div>${tail}</div>`;
       };
       const tag = roundLabel ? `<div class="match-tag">${roundLabel} · match ${m + 1}</div>` : "";
-      return `<div class="${matchCls}">${tag}${slotHtml(match.t1Names, match.t1Ids, "t1")}<div class="vs">VS</div>${slotHtml(match.t2Names, match.t2Ids, "t2")}</div>`;
+      return `<div class="match ${stateCls}">${tag}${slotHtml(match.t1Names, match.t1Ids, "t1")}<div class="vs">VS</div>${slotHtml(match.t2Names, match.t2Ids, "t2")}</div>`;
     }
 
     function recordWinner(r, m, slot) {
