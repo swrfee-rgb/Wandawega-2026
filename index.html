@@ -1576,7 +1576,7 @@
       <h2>Pair Leagues</h2>
       <button class="primary" id="league-randomize">Randomize pairing</button>
       <button class="danger mt" id="league-clear">Clear pairing</button>
-      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: the two smaller offices (San Francisco and Paris) are never put in the same league — that would leave the two larger offices stuck together and make the leagues lopsided. Once a pairing exists, the bracket will only pair teammates from within the same league, and every Round 1 match is drawn as one team from each league.</div>
+      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: each league's combined sign-ups should be at least 8 (a full bracket). The randomizer enumerates the three possible pairings, keeps the ones that satisfy the rule on both sides, and picks at random among those. If no pairing reaches eight per side (too few total sign-ups), it falls back to the most balanced split. Once a pairing exists, the bracket only pairs teammates from within the same league, and every Round 1 match is drawn as one team from each league.</div>
     </div>
   </section>
 
@@ -1605,11 +1605,12 @@
         <details class="rule">
           <summary>
             <span class="rule-num">3</span>
-            <span class="rule-head">1 big office + 1 small office = 1 league.</span>
+            <span class="rule-head">Each league needs at least 8 sign-ups.</span>
           </summary>
           <div class="rule-body">
-            <p>The pairing is random, with one guardrail: each league joins one of the larger offices with one of the smaller ones. Pairing the two big offices together would leave the two small offices on the other side and the leagues lopsided, so we avoid it.</p>
-            <p>In practice today that means San Francisco and Paris (the smaller offices) always sit in opposite leagues, each paired with one of Chicago or New York.</p>
+            <p>The pairing is random, with one guardrail: each league's combined sign-ups should reach at least eight, so it can field a full bracket. When sign-ups close, the randomizer considers all three possible pairings of the four offices and picks at random among those where both sides have eight or more.</p>
+            <p class="rule-eg"><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. The valid pairing is <em>Chicago + San Francisco</em> (10) vs <em>New York + Paris</em> (8). The other splits leave one league short of eight, so the randomizer won't pick them.</p>
+            <p>If total sign-ups are below sixteen and no pairing can satisfy the rule, the randomizer falls back to the most balanced split.</p>
           </div>
         </details>
         <details class="rule">
@@ -1721,10 +1722,11 @@
           </div>
         </details>
         <details class="faq-item">
-          <summary>Why is each league one big office + one small office?</summary>
+          <summary>How are the four offices paired into two leagues?</summary>
           <div class="faq-body">
-            <p>It keeps the leagues evenly sized. If we paired the two big offices on one side, the two small offices would be stuck together on the other and the leagues would be lopsided. Pairing one big with one small keeps both leagues balanced.</p>
-            <p>Today the big offices are Chicago and New York; the small ones are San Francisco and Paris. So SF and Paris always sit in opposite leagues, each paired with one of the larger offices. Which of the two valid pairings is used is chosen at random.</p>
+            <p>Once sign-ups close, the randomizer enumerates all three possible ways to split the four offices into two pairs, then picks at random among the pairings where each league has at least eight sign-ups (enough to field a full bracket).</p>
+            <p><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. Pairing Chicago with San Francisco (10) against New York with Paris (8) is the only split where both leagues clear eight, so it's the one the randomizer uses. The other two splits would leave one league short, so they're skipped.</p>
+            <p>If total sign-ups are below sixteen and no split can satisfy the rule, the randomizer falls back to the most balanced pairing (smallest gap between the two side-totals).</p>
           </div>
         </details>
         <details class="faq-item">
@@ -2767,16 +2769,42 @@
 
     document.getElementById("league-randomize").addEventListener("click", () => {
       if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
-      // Constraint: the two smaller offices (SF + Paris) must never share
-      // a league — that would force the two larger offices into the other
-      // league and leave the head-counts lopsided. Place SF first, force
-      // Paris into the opposite league, then randomly distribute the
-      // remaining offices one per league. Deterministic — no
-      // reject-and-retry loop needed.
-      const others = fisherYates(OFFICES.filter(o => o !== "San Francisco" && o !== "Paris"));
-      const sfLeague    = [ "San Francisco", others[0] ];
-      const parisLeague = [ "Paris",         others[1] ];
-      const leagues = fisherYates([ sfLeague, parisLeague ]);
+      // Constraint: each league's combined sign-ups should be >= 8 so it
+      // can field a full bracket of 8 players. Generate all 3 ways to
+      // split 4 offices into 2 pairs, keep the ones that satisfy the
+      // >= 8 rule on both sides, and pick at random among those. If no
+      // pairing satisfies it (total sign-ups < 16 or a very skewed
+      // distribution), fall back to the most balanced pairing — the one
+      // with the smallest gap between the two side-totals.
+      const counts = {};
+      OFFICES.forEach(o => counts[o] = 0);
+      playerArray().forEach(p => { if (counts[p.office] != null) counts[p.office]++; });
+      const [a, b, c, d] = OFFICES;
+      const pairings = [
+        [[a, b], [c, d]],
+        [[a, c], [b, d]],
+        [[a, d], [b, c]],
+      ];
+      const score = (pair) => pair.reduce((s, o) => s + counts[o], 0);
+      const annotated = pairings.map(p => ({
+        pair: p,
+        s1: score(p[0]),
+        s2: score(p[1]),
+      }));
+      const valid = annotated.filter(x => x.s1 >= 8 && x.s2 >= 8);
+      let chosen;
+      if (valid.length) {
+        chosen = fisherYates(valid)[0];
+      } else {
+        // Fallback: minimize the gap between the two sides.
+        const minGap = Math.min(...annotated.map(x => Math.abs(x.s1 - x.s2)));
+        const ties = annotated.filter(x => Math.abs(x.s1 - x.s2) === minGap);
+        chosen = fisherYates(ties)[0];
+      }
+      const leagues = fisherYates([
+        fisherYates(chosen.pair[0].slice()),
+        fisherYates(chosen.pair[1].slice()),
+      ]);
       const payload = {
         A: { offices: leagues[0] },
         B: { offices: leagues[1] },
@@ -2831,8 +2859,11 @@
       db.ref("bracket").remove().then(() => toast("Bracket reset"));
     });
     document.getElementById("admin-clear").addEventListener("click", () => {
-      if (!confirm("Remove ALL signed-up players? This can't be undone.")) return;
-      db.ref("players").remove().then(() => toast("Players cleared"));
+      if (!confirm("Remove ALL signed-up players? This also clears the bracket. Can't be undone.")) return;
+      Promise.all([
+        db.ref("players").remove(),
+        db.ref("bracket").remove(),
+      ]).then(() => toast("Players and bracket cleared"));
     });
     document.getElementById("admin-seed").addEventListener("click", () => {
       const input = document.getElementById("seed-count");
