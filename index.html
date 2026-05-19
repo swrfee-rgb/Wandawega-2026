@@ -2066,6 +2066,26 @@
     "zoe small": "Zoë Small"
   };
 
+  // Best-guess default office per Studio Gang person, used to pre-fill
+  // the Office dropdown when a name is picked from the sign-up
+  // autocomplete. The user can still change it before submitting.
+  //
+  // The only office info exposed on studiogang.com/people/ is in role
+  // titles that explicitly name an office ("Chicago Office Manager",
+  // etc.), so the static seed below covers just the five inferrable
+  // people. Anyone else's office is learned dynamically — every
+  // successful sign-up writes (normalized name -> office) to Firebase
+  // /name_offices, and the autocomplete consults that map alongside
+  // the seed. Over a season the learned map covers everyone who
+  // signs up and the static seed becomes a fallback.
+  const PEOPLE_OFFICES = {
+    "austin chod":          "New York",
+    "carolyn brunsen junk": "Chicago",
+    "cara connelly gilbert":"New York",
+    "jennifer simon":       "San Francisco",
+    "sok-man cheung":       "Paris",
+  };
+
   const configured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
   if (!configured) document.getElementById("config-warn").hidden = false;
 
@@ -2262,7 +2282,7 @@
       statusText.textContent = live ? "Live" : "Offline";
     });
 
-    let state = { players: {}, bracket: null, leagues: null, gamemasters: {}, faqQuestions: {}, passcode: DEFAULT_PASSCODE };
+    let state = { players: {}, bracket: null, leagues: null, gamemasters: {}, faqQuestions: {}, nameOffices: {}, passcode: DEFAULT_PASSCODE };
     let adminUnlocked = false;
 
     db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
@@ -2285,6 +2305,9 @@
     db.ref("faq_questions").on("value", s => {
       state.faqQuestions = s.val() || {};
       renderFaqQuestions();
+    });
+    db.ref("name_offices").on("value", s => {
+      state.nameOffices = s.val() || {};
     });
 
     const nameInput = document.getElementById("signup-name");
@@ -2371,9 +2394,28 @@
       });
     }
 
+    // When a name is picked from autocomplete, try to pre-fill the
+    // Office dropdown with our best guess. Order of preference:
+    //   1) learned mapping from past sign-ups (state.nameOffices), and
+    //   2) the small static PEOPLE_OFFICES seed for the 5 people whose
+    //      listing-page role names an office.
+    // The dropdown stays editable so the user can correct a bad guess.
+    function inferOfficeForName(displayName) {
+      const key = normalizeName(displayName);
+      if (!key) return null;
+      const learned = state.nameOffices && state.nameOffices[key];
+      if (learned && OFFICES.includes(learned)) return learned;
+      const seeded = PEOPLE_OFFICES[key];
+      if (seeded && OFFICES.includes(seeded)) return seeded;
+      return null;
+    }
     attachNameAutocomplete(nameInput, suggestBox, {
       exclude: () => new Set(playerArray().map(p => normalizeName(p.name))),
-      onPick: () => officeSel.focus(),
+      onPick: (name) => {
+        const guess = inferOfficeForName(name);
+        if (guess && !officeSel.value) officeSel.value = guess;
+        officeSel.focus();
+      },
       onEnter: () => signUp(),
     });
 
@@ -2490,6 +2532,11 @@
       }, (err, committed) => {
         if (err) return toast("Sign-up failed", true);
         if (!committed) return toast("That name's already in", true);
+        // Remember this person -> office for future autocomplete picks.
+        // Stored under /name_offices/<normalized-name> so it survives
+        // 'Clear all players' and is shared across all clients.
+        const learnKey = normalizeName(raw);
+        if (learnKey && office) db.ref(`name_offices/${learnKey}`).set(office);
         nameInput.value = "";
         officeSel.selectedIndex = 0;
         const surveyForm = document.getElementById("signup-survey");
