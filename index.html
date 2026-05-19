@@ -818,6 +818,97 @@
   .faq-body p { margin: 0; padding: 0; }
   .faq-body p + p { margin-top: 8px; }
 
+  /* COMMUNITY QUESTIONS — post-a-question form + threaded list. */
+  .ask-form {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ask-name-row { display: flex; align-items: center; gap: 10px; }
+  .ask-avatar-slot { flex: 0 0 auto; display: inline-flex; }
+  .ask-avatar-slot .avatar { width: 36px; height: 36px; font-size: 11px; }
+  .ask-avatar-slot .avatar.anon-av {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.55);
+    border-style: dashed;
+  }
+  .ask-name-field { flex: 1; min-width: 0; }
+  .ask-name-field input {
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 10px 16px;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .ask-name-field input:focus {
+    border-color: var(--cyan);
+    background: rgba(42, 214, 238, 0.08);
+  }
+  #ask-text {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #ask-text:focus {
+    border-color: var(--cyan);
+    background: rgba(42, 214, 238, 0.06);
+  }
+  .ask-actions {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .help-inline {
+    font-size: 11px; color: rgba(255,255,255,0.45);
+    letter-spacing: 0.04em;
+  }
+  .ask-list { display: flex; flex-direction: column; gap: 10px; }
+  .ask-empty {
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+    padding: 16px 8px;
+    font-size: 13px;
+  }
+  .ask-item {
+    display: flex; gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+  }
+  .ask-item .avatar { width: 34px; height: 34px; font-size: 11px; flex: 0 0 auto; }
+  .ask-item-content { flex: 1; min-width: 0; }
+  .ask-meta {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 11px; letter-spacing: 0.02em;
+  }
+  .ask-author { font-weight: 700; color: rgba(255,255,255,0.92); }
+  .ask-author.anon { color: rgba(255,255,255,0.6); font-style: italic; font-weight: 500; }
+  .ask-time { color: rgba(255,255,255,0.45); }
+  .ask-body {
+    margin-top: 4px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
   /* LEAGUE TAB — two side-by-side league cards */
   .league-grid {
     display: grid;
@@ -1509,6 +1600,25 @@
         </details>
       </div>
     </div>
+
+    <div class="panel">
+      <h2>Ask a Question</h2>
+      <div class="ask-form">
+        <div class="ask-name-row">
+          <span class="ask-avatar-slot" id="ask-avatar"></span>
+          <div class="name-field ask-name-field">
+            <input id="ask-name" type="text" placeholder="Your name (blank = Anonymous)" maxlength="40" autocomplete="off" spellcheck="false">
+            <div id="ask-name-suggest" class="suggest" hidden></div>
+          </div>
+        </div>
+        <textarea id="ask-text" placeholder="What's on your mind?" rows="3" maxlength="500"></textarea>
+        <div class="ask-actions">
+          <button class="primary" id="ask-submit">Post question</button>
+          <span class="help-inline">⌘ + Enter to post</span>
+        </div>
+      </div>
+      <div id="ask-list" class="ask-list"></div>
+    </div>
   </section>
 </main>
 
@@ -2007,7 +2117,7 @@
       statusText.textContent = live ? "Live" : "Offline";
     });
 
-    let state = { players: {}, bracket: null, leagues: null, gamemasters: {}, passcode: DEFAULT_PASSCODE };
+    let state = { players: {}, bracket: null, leagues: null, gamemasters: {}, faqQuestions: {}, passcode: DEFAULT_PASSCODE };
     let adminUnlocked = false;
 
     db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
@@ -2026,6 +2136,10 @@
     db.ref("gamemasters").on("value", s => {
       state.gamemasters = s.val() || {};
       renderLeagues();
+    });
+    db.ref("faq_questions").on("value", s => {
+      state.faqQuestions = s.val() || {};
+      renderFaqQuestions();
     });
 
     const nameInput = document.getElementById("signup-name");
@@ -2117,6 +2231,97 @@
       onPick: () => officeSel.focus(),
       onEnter: () => signUp(),
     });
+
+    // FAQ community questions — post + list.
+    const askName = document.getElementById("ask-name");
+    const askNameSuggest = document.getElementById("ask-name-suggest");
+    const askText = document.getElementById("ask-text");
+    const askSubmit = document.getElementById("ask-submit");
+    const askAvatar = document.getElementById("ask-avatar");
+
+    function anonAvatarHtml() {
+      return `<div class="avatar anon-av">?</div>`;
+    }
+    function syncAskAvatar() {
+      const n = (askName.value || "").trim();
+      askAvatar.innerHTML = n ? avatarHtml(n) : anonAvatarHtml();
+    }
+    syncAskAvatar();
+    attachNameAutocomplete(askName, askNameSuggest, {
+      onPick: () => { syncAskAvatar(); askText.focus(); },
+      onEnter: () => askText.focus(),
+    });
+    askName.addEventListener("input", syncAskAvatar);
+    askName.addEventListener("blur", syncAskAvatar);
+
+    function postQuestion() {
+      const text = (askText.value || "").trim();
+      if (!text) return toast("Type a question first", true);
+      if (text.length > 500) return toast("Question is too long", true);
+      const name = (askName.value || "").trim() || "Anonymous";
+      askSubmit.disabled = true;
+      db.ref("faq_questions").push({
+        name,
+        text,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+      }).then(() => {
+        askText.value = "";
+        toast("Posted");
+      }).catch(() => toast("Couldn't post", true))
+        .finally(() => { askSubmit.disabled = false; });
+    }
+    askSubmit.addEventListener("click", postQuestion);
+    askText.addEventListener("keydown", e => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        postQuestion();
+      }
+    });
+
+    function timeAgo(ts) {
+      if (!ts) return "";
+      const diff = Date.now() - ts;
+      if (diff < 45 * 1000) return "just now";
+      const m = Math.floor(diff / 60000);
+      if (m < 60) return m + "m ago";
+      const h = Math.floor(m / 3600000);
+      if (h < 24) return h + "h ago";
+      const d = Math.floor(h / 24);
+      if (d < 30) return d + "d ago";
+      const mo = Math.floor(d / 30);
+      if (mo < 12) return mo + "mo ago";
+      return Math.floor(mo / 12) + "y ago";
+    }
+
+    function renderFaqQuestions() {
+      const list = document.getElementById("ask-list");
+      if (!list) return;
+      const items = Object.entries(state.faqQuestions || {})
+        .map(([id, q]) => Object.assign({ id }, q || {}))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      if (!items.length) {
+        list.innerHTML = `<div class="ask-empty">No questions yet — be the first to ask.</div>`;
+        return;
+      }
+      list.innerHTML = items.map(q => {
+        const rawName = (q.name || "").trim();
+        const displayName = rawName || "Anonymous";
+        const isAnon = !rawName || displayName === "Anonymous";
+        const avatar = isAnon ? anonAvatarHtml() : avatarHtml(displayName);
+        return `
+          <div class="ask-item">
+            ${avatar}
+            <div class="ask-item-content">
+              <div class="ask-meta">
+                <span class="ask-author${isAnon ? ' anon' : ''}">${escapeHtml(displayName)}</span>
+                <span class="ask-time">${timeAgo(q.createdAt)}</span>
+              </div>
+              <div class="ask-body">${escapeHtml(q.text || "")}</div>
+            </div>
+          </div>`;
+      }).join("");
+    }
+    renderFaqQuestions();
 
     function signUp() {
       const raw = (nameInput.value || "").trim();
