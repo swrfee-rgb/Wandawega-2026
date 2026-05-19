@@ -2435,7 +2435,7 @@
     db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
     db.ref("players").on("value", s => {
       state.players = s.val() || {};
-      renderSignup(); renderAdminPlayers(); renderBracketStats(); renderLeagues();
+      renderSignup(); renderAdminPlayers(); renderBracket(); renderBracketStats(); renderLeagues();
     });
     db.ref("bracket").on("value", s => {
       state.bracket = s.val() || null;
@@ -3268,7 +3268,13 @@
       champMount.innerHTML = "";
       const b = state.bracket;
       const rounds = roundsArray(b);
-      if (!rounds) {
+      // Treat the bracket as empty when there are no players. Match
+      // metadata (names, ids) lives inside /bracket itself, so a wipe
+      // of /players that doesn't also wipe /bracket leaves the diagram
+      // visible with ghost teams. Suppress that here so the UI stays
+      // honest even if the underlying data is half-cleared.
+      const noPlayers = !state.players || !Object.keys(state.players).length;
+      if (!rounds || noPlayers) {
         mount.innerHTML = '<div class="panel"><div class="empty">No bracket yet.<br>An admin will generate it once everyone has signed up.</div></div>';
         return;
       }
