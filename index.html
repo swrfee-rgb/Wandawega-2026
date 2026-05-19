@@ -2517,11 +2517,10 @@
       });
     }
 
-    // When a name is picked from autocomplete, try to pre-fill the
-    // Office dropdown with our best guess. Order of preference:
+    // When a name is picked from autocomplete, pre-fill the Office
+    // dropdown silently with our best guess. Order of preference:
     //   1) learned mapping from past sign-ups (state.nameOffices), and
-    //   2) the small static PEOPLE_OFFICES seed for the 5 people whose
-    //      listing-page role names an office.
+    //   2) the static PEOPLE_OFFICES seed (every Studio Gang person).
     // The dropdown stays editable so the user can correct a bad guess.
     function inferOfficeForName(displayName) {
       const key = normalizeName(displayName);
@@ -2536,8 +2535,7 @@
       exclude: () => new Set(playerArray().map(p => normalizeName(p.name))),
       onPick: (name) => {
         const guess = inferOfficeForName(name);
-        if (guess && !officeSel.value) officeSel.value = guess;
-        officeSel.focus();
+        if (guess) officeSel.value = guess;
       },
       onEnter: () => signUp(),
     });
