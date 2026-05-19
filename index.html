@@ -1180,6 +1180,27 @@
     display: flex; align-items: center; gap: 14px;
     min-width: 0; flex: 1;
   }
+  .player-info-text {
+    display: flex; flex-direction: column; gap: 4px;
+    min-width: 0; flex: 1;
+  }
+  .player-survey {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .survey-pill {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.55);
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .survey-pill.seg-A { background: rgba(107,243,168,0.18); color: #6bf3a8; }
+  .survey-pill.seg-B { background: rgba(246,197,74,0.18);  color: #f6c54a; }
+  .survey-pill.seg-C { background: rgba(255,153,102,0.18); color: #ff9966; }
+  .survey-pill.seg-x { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.4); font-style: italic; }
   .player-name {
     font-weight: 400; font-size: 15px;
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -2477,6 +2498,24 @@
       });
     }
 
+    // Survey-answer labels (admin-only badges on player rows + survey
+    // stats panel both pull from this so the wording stays in sync).
+    const SURVEY_OPTS = {
+      commitment: { A: "Very!",      B: "Flexible",        C: "Backup" },
+      compete:    { A: "Definitely", B: "If time allows",  C: "Lottery only" },
+    };
+
+    function surveyBadges(rawPlayer) {
+      if (!rawPlayer) return "";
+      const c = rawPlayer.commitment, p = rawPlayer.compete;
+      const seg = (v) => (v === "A" || v === "B" || v === "C") ? `seg-${v}` : "seg-x";
+      const cText = (c && SURVEY_OPTS.commitment[c]) || "not answered";
+      const pText = (p && SURVEY_OPTS.compete[p])    || "not answered";
+      return `
+        <span class="survey-pill ${seg(c)}" title="Commitment: ${escapeHtml(cText)}">Commit ${c || "—"}</span>
+        <span class="survey-pill ${seg(p)}" title="Sub-match: ${escapeHtml(pText)}">Sub-match ${p || "—"}</span>`;
+    }
+
     function renderSignup() {
       const open = !state.bracket;
       document.getElementById("signup-open").hidden = !open;
@@ -2493,7 +2532,18 @@
         for (const p of group) {
           const row = document.createElement("div");
           row.className = "player-row";
-          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div>`;
+          // Admin-only: show survey-answer badges below the player name.
+          const adminExtras = adminUnlocked
+            ? `<div class="player-survey">${surveyBadges(state.players[p.id])}</div>`
+            : "";
+          row.innerHTML = `
+            <div class="player-info">
+              ${avatarHtml(p.name)}
+              <div class="player-info-text">
+                <span class="player-name">${escapeHtml(p.name)}</span>
+                ${adminExtras}
+              </div>
+            </div>`;
           section.appendChild(row);
         }
         list.appendChild(section);
@@ -2509,7 +2559,7 @@
         adminLocked.hidden = true;
         adminPanel.hidden = false;
         document.getElementById("admin-pass").value = "";
-        renderAdminPlayers(); renderBracket(); renderLeagues();
+        renderAdminPlayers(); renderBracket(); renderLeagues(); renderSignup();
         toast("Admin unlocked");
       } else {
         toast("Wrong passcode", true);
@@ -2522,7 +2572,7 @@
       adminUnlocked = false;
       adminPanel.hidden = true;
       adminLocked.hidden = false;
-      renderBracket(); renderLeagues();
+      renderBracket(); renderLeagues(); renderSignup();
     });
 
     document.getElementById("league-randomize").addEventListener("click", () => {
