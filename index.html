@@ -890,6 +890,57 @@
     .league-vs { padding: 2px 0; }
   }
 
+  /* GAMEMASTER LIST — one row per office with name + GM input/display. */
+  .gm-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .gm-row {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .gm-row-head {
+    font-size: 11px; font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.04em;
+  }
+  .gm-row-body {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .gm-label {
+    font-size: 9px; font-weight: 700;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase; letter-spacing: 0.18em;
+  }
+  .gm-value {
+    flex: 1;
+    font-size: 13px;
+    color: rgba(255,255,255,0.92);
+  }
+  .gm-value.empty { color: rgba(255,255,255,0.4); font-style: italic; }
+  .gm-input {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .gm-input:focus {
+    border-color: var(--cyan);
+    background: rgba(42, 214, 238, 0.08);
+  }
+  @media (max-width: 520px) {
+    .gm-grid { grid-template-columns: 1fr; }
+  }
+
   /* LEAGUE ROSTER — admin picker + read-only roster grid inside each card */
   .league-roster {
     margin-top: 4px;
@@ -1242,6 +1293,11 @@
     <div class="panel">
       <h2>Leagues</h2>
       <div id="league-mount"></div>
+    </div>
+    <div class="panel">
+      <h2>Office Gamemasters</h2>
+      <div id="gm-mount"></div>
+      <div class="help">The gamemaster picks their office's tournament roster when sign-ups exceed quota, and locks the final list by July 28, 2026 (the day before camp opens). Editable by admins.</div>
     </div>
     <div class="panel" id="league-admin-panel" hidden>
       <h2>Pair Leagues</h2>
@@ -1936,7 +1992,7 @@
       statusText.textContent = live ? "Live" : "Offline";
     });
 
-    let state = { players: {}, bracket: null, leagues: null, passcode: DEFAULT_PASSCODE };
+    let state = { players: {}, bracket: null, leagues: null, gamemasters: {}, passcode: DEFAULT_PASSCODE };
     let adminUnlocked = false;
 
     db.ref("settings/passcode").on("value", s => { state.passcode = s.val() || DEFAULT_PASSCODE; });
@@ -1950,6 +2006,10 @@
     });
     db.ref("leagues").on("value", s => {
       state.leagues = s.val() || null;
+      renderLeagues();
+    });
+    db.ref("gamemasters").on("value", s => {
+      state.gamemasters = s.val() || {};
       renderLeagues();
     });
 
@@ -2206,6 +2266,7 @@
       const adminPanel = document.getElementById("league-admin-panel");
       if (!mount) return;
       adminPanel.hidden = !adminUnlocked;
+      renderGamemasters();
 
       const leagues = state.leagues;
       if (!leagues || !leagues.A || !leagues.B) {
@@ -2332,6 +2393,49 @@
       mount.querySelectorAll('.roster-tile[data-action="toggle"]').forEach(el => {
         el.addEventListener("click", () => {
           toggleRosterPlayer(el.dataset.league, el.dataset.office, el.dataset.player);
+        });
+      });
+    }
+
+    function renderGamemasters() {
+      const mount = document.getElementById("gm-mount");
+      if (!mount) return;
+      const gms = state.gamemasters || {};
+      const rows = OFFICES.map(office => {
+        const name = gms[office] || "";
+        const body = adminUnlocked
+          ? `<span class="gm-label">GM</span>
+             <input class="gm-input" type="text" maxlength="60" autocomplete="off" spellcheck="false"
+                    data-office="${escapeHtml(office)}"
+                    value="${escapeHtml(name)}"
+                    placeholder="Add a gamemaster">`
+          : `<span class="gm-label">GM</span>
+             ${ name
+                ? `<span class="gm-value">${escapeHtml(name)}</span>`
+                : `<span class="gm-value empty">Not set</span>` }`;
+        return `
+          <div class="gm-row">
+            <div class="gm-row-head">${escapeHtml(office)}</div>
+            <div class="gm-row-body">${body}</div>
+          </div>`;
+      }).join("");
+      mount.innerHTML = `<div class="gm-grid">${rows}</div>`;
+      if (!adminUnlocked) return;
+      mount.querySelectorAll(".gm-input").forEach(input => {
+        const original = input.value;
+        const save = () => {
+          const office = input.dataset.office;
+          const next = input.value.trim();
+          if (next === original.trim()) return;
+          const ref = db.ref(`gamemasters/${office}`);
+          (next ? ref.set(next) : ref.remove())
+            .then(() => toast(next ? `${office} gamemaster saved` : `${office} gamemaster cleared`))
+            .catch(() => toast("Couldn't save gamemaster", true));
+        };
+        input.addEventListener("blur", save);
+        input.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+          else if (e.key === "Escape") { input.value = original; input.blur(); }
         });
       });
     }
