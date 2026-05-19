@@ -890,7 +890,9 @@
     .league-vs { padding: 2px 0; }
   }
 
-  /* GAMEMASTER LIST — one row per office with name + GM input/display. */
+  /* GAMEMASTER LIST — single-row card per office:
+       [OFFICE LABEL]  [avatar 38px]  [name 16px / input]
+     Card height is dictated by the avatar (~50px tall with padding). */
   .gm-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -899,53 +901,50 @@
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
-    padding: 10px 12px;
-    display: flex; flex-direction: column; gap: 4px;
+    padding: 6px 12px;
+    display: flex; align-items: center; gap: 12px;
   }
-  .gm-row-head {
-    font-size: 11px; font-weight: 700;
-    color: rgba(255,255,255,0.9);
-    letter-spacing: 0.04em;
-  }
-  .gm-row-body {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .gm-label {
-    font-size: 9px; font-weight: 700;
-    color: rgba(255,255,255,0.45);
-    text-transform: uppercase; letter-spacing: 0.18em;
+  .gm-office {
     flex: 0 0 auto;
+    min-width: 88px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
   }
-  .gm-value {
-    flex: 1;
-    min-width: 0;
-    font-size: 13px;
-    color: rgba(255,255,255,0.92);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .gm-value.empty { color: rgba(255,255,255,0.4); font-style: italic; }
   .gm-avatar-slot { flex: 0 0 auto; display: inline-flex; }
+  .gm-row .avatar { width: 38px; height: 38px; font-size: 11px; }
   .avatar.gm-placeholder {
     color: rgba(255,255,255,0.4);
     background: rgba(255,255,255,0.03);
     border-style: dashed;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 300;
   }
+  .gm-content {
+    flex: 1; min-width: 0;
+    display: flex; align-items: center;
+  }
+  .gm-value {
+    flex: 1; min-width: 0;
+    font-size: 16px;
+    color: rgba(255,255,255,0.92);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .gm-value.empty { color: rgba(255,255,255,0.4); font-style: italic; font-size: 14px; }
   .gm-input-wrap {
     position: relative;
-    flex: 1;
-    min-width: 0;
+    flex: 1; min-width: 0;
   }
   .gm-input {
     width: 100%;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: 8px;
-    padding: 5px 10px;
+    padding: 6px 12px;
     color: #ffffff;
     font: inherit;
-    font-size: 13px;
+    font-size: 16px;
     outline: none;
     transition: border-color 0.15s, background 0.15s;
   }
@@ -2435,14 +2434,12 @@
       const gms = state.gamemasters || {};
       const rows = OFFICES.map(office => {
         const name = gms[office] || "";
-        let body;
+        const avatar = name
+          ? avatarHtml(name)
+          : `<div class="avatar gm-placeholder">+</div>`;
+        let content;
         if (adminUnlocked) {
-          const avatar = name
-            ? avatarHtml(name, "sm")
-            : `<div class="avatar sm gm-placeholder">+</div>`;
-          body = `
-            <span class="gm-label">GM</span>
-            <span class="gm-avatar-slot">${avatar}</span>
+          content = `
             <div class="gm-input-wrap">
               <input class="gm-input" type="text" maxlength="60" autocomplete="off" spellcheck="false"
                      data-office="${escapeHtml(office)}"
@@ -2451,19 +2448,15 @@
               <div class="suggest gm-suggest" hidden></div>
             </div>`;
         } else if (name) {
-          body = `
-            <span class="gm-label">GM</span>
-            ${avatarHtml(name, "sm")}
-            <span class="gm-value">${escapeHtml(name)}</span>`;
+          content = `<span class="gm-value">${escapeHtml(name)}</span>`;
         } else {
-          body = `
-            <span class="gm-label">GM</span>
-            <span class="gm-value empty">Not set</span>`;
+          content = `<span class="gm-value empty">Not set</span>`;
         }
         return `
           <div class="gm-row">
-            <div class="gm-row-head">${escapeHtml(office)}</div>
-            <div class="gm-row-body">${body}</div>
+            <span class="gm-office">${escapeHtml(office)}</span>
+            <span class="gm-avatar-slot">${avatar}</span>
+            <div class="gm-content">${content}</div>
           </div>`;
       }).join("");
       mount.innerHTML = `<div class="gm-grid">${rows}</div>`;
@@ -2485,8 +2478,8 @@
           // listener will rerender soon, but this hides the round-trip.
           if (avatarSlot) {
             avatarSlot.innerHTML = next
-              ? avatarHtml(next, "sm")
-              : `<div class="avatar sm gm-placeholder">+</div>`;
+              ? avatarHtml(next)
+              : `<div class="avatar gm-placeholder">+</div>`;
           }
           const ref = db.ref(`gamemasters/${office}`);
           (next ? ref.set(next) : ref.remove())
