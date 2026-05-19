@@ -1243,6 +1243,106 @@
     font-size: 12px; color: var(--muted);
     line-height: 1.5; margin-top: 10px;
   }
+
+  /* SIGN-UP SURVEY (radio-card questions on the sign-up form) */
+  .survey {
+    appearance: none; border: 0;
+    padding: 0; margin: 14px 0 0;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .survey-q { display: flex; flex-direction: column; gap: 8px; }
+  .survey-q-text {
+    font-size: 13px; font-weight: 600;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.4;
+  }
+  .survey-opts { display: flex; flex-direction: column; gap: 6px; }
+  .survey-opts label {
+    display: flex; align-items: flex-start; gap: 10px;
+    cursor: pointer;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 12px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.4;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+  }
+  .survey-opts label:hover { background: rgba(255,255,255,0.06); }
+  .survey-opts input[type="radio"] {
+    margin: 2px 0 0; accent-color: var(--cyan);
+    flex: 0 0 auto;
+  }
+  .survey-opts label:has(input:checked) {
+    border-color: var(--cyan);
+    background: rgba(42, 214, 238, 0.10);
+    color: #ffffff;
+  }
+
+  /* ADMIN SURVEY STATS (stacked bars + per-office breakdown) */
+  .survey-stats { display: flex; flex-direction: column; gap: 20px; }
+  .survey-stat-block { display: flex; flex-direction: column; gap: 10px; }
+  .survey-stat-title {
+    font-size: 12px; font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    line-height: 1.4;
+  }
+  .survey-stat-overall { display: flex; flex-direction: column; gap: 4px; }
+  .survey-stat-byoffice {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-top: 4px;
+  }
+  .survey-stat-row { display: flex; align-items: center; gap: 8px; }
+  .survey-stat-label {
+    flex: 0 0 86px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.7);
+  }
+  .survey-stat-bar {
+    flex: 1; min-width: 0;
+    display: flex; height: 22px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .survey-stat-row.overall .survey-stat-bar { height: 26px; }
+  .survey-stat-bar .seg {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    color: rgba(0,0,0,0.65);
+    transition: width 0.3s ease-out;
+    min-width: 0;
+  }
+  .survey-stat-bar .seg.seg-A { background: #6bf3a8; }
+  .survey-stat-bar .seg.seg-B { background: #f6c54a; }
+  .survey-stat-bar .seg.seg-C { background: #ff9966; }
+  .survey-stat-bar .seg.seg-x { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
+  .survey-stat-count {
+    flex: 0 0 auto;
+    font-size: 10px; font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    font-variant-numeric: tabular-nums;
+    min-width: 56px; text-align: right;
+  }
+  .survey-stat-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 10px; color: rgba(255,255,255,0.7);
+    margin-top: 4px;
+  }
+  .survey-stat-legend .dot {
+    display: inline-block; width: 9px; height: 9px;
+    border-radius: 50%; margin-right: 4px; vertical-align: middle;
+  }
+  .survey-stat-legend .dot.seg-A { background: #6bf3a8; }
+  .survey-stat-legend .dot.seg-B { background: #f6c54a; }
+  .survey-stat-legend .dot.seg-C { background: #ff9966; }
+  .survey-stat-empty {
+    color: rgba(255,255,255,0.55);
+    font-size: 12px; font-style: italic;
+    text-align: center; padding: 10px;
+  }
   code {
     background: var(--panel); padding: 2px 6px;
     font-size: 90%;
@@ -1351,8 +1451,26 @@
           <option>New York</option>
           <option>Paris</option>
         </select>
+        <fieldset class="survey mt" id="signup-survey">
+          <div class="survey-q">
+            <div class="survey-q-text">Our league has limited spots — how committed are you?</div>
+            <div class="survey-opts" data-q="commit">
+              <label><input type="radio" name="commit" value="A"><span>Very!</span></label>
+              <label><input type="radio" name="commit" value="B"><span>Very, but may give someone else the chance</span></label>
+              <label><input type="radio" name="commit" value="C"><span>Consider me a backup</span></label>
+            </div>
+          </div>
+          <div class="survey-q">
+            <div class="survey-q-text">Are you joining a competitive sub-match to fight for your entry?</div>
+            <div class="survey-opts" data-q="compete">
+              <label><input type="radio" name="compete" value="A"><span>Definitely!</span></label>
+              <label><input type="radio" name="compete" value="B"><span>Sure, but may not have time</span></label>
+              <label><input type="radio" name="compete" value="C"><span>I won't — count me in for the lottery</span></label>
+            </div>
+          </div>
+        </fieldset>
         <button class="primary mt" id="signup-btn">Add me</button>
-        <div class="help">Sign up individually. Players are paired into random doubles teams when the bracket is generated. Sign-ups close automatically at that point.</div>
+        <div class="help">Sign up individually. Players are paired into random doubles teams when the bracket is generated. Sign-ups close automatically at that point. The two survey questions are optional and help your office's gamemaster pick the final roster.</div>
       </div>
       <div id="signup-closed" hidden class="empty">
         Sign-ups are closed. The bracket has been generated.
@@ -1384,6 +1502,12 @@
         <h2>Players (<span id="admin-count">0</span>)</h2>
         <div id="admin-list" class="player-list"></div>
         <button class="danger mt" id="admin-clear">Clear all players</button>
+      </div>
+
+      <div class="panel">
+        <h2>Sign-up Survey</h2>
+        <div id="survey-stats"></div>
+        <div class="help">Answers from the two optional survey questions on sign-up — meant to help each office's gamemaster pick the final roster when sign-ups exceed quota.</div>
       </div>
 
       <div class="panel">
@@ -2330,18 +2454,25 @@
       if (!office) return toast("Pick your office", true);
       if (raw.length > 40) return toast("Name too long", true);
       if (state.bracket) return toast("Sign-ups closed", true);
+      const commitVal = (document.querySelector('input[name="commit"]:checked') || {}).value || null;
+      const competeVal = (document.querySelector('input[name="compete"]:checked') || {}).value || null;
       const lower = raw.toLowerCase();
       db.ref("players").transaction(curr => {
         curr = curr || {};
         for (const k in curr) if ((curr[k].name || "").toLowerCase() === lower) return;
         const id = "p_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
-        curr[id] = { name: raw, office, addedAt: firebase.database.ServerValue.TIMESTAMP };
+        const record = { name: raw, office, addedAt: firebase.database.ServerValue.TIMESTAMP };
+        if (commitVal) record.commitment = commitVal;
+        if (competeVal) record.compete = competeVal;
+        curr[id] = record;
         return curr;
       }, (err, committed) => {
         if (err) return toast("Sign-up failed", true);
         if (!committed) return toast("That name's already in", true);
         nameInput.value = "";
         officeSel.selectedIndex = 0;
+        const surveyForm = document.getElementById("signup-survey");
+        if (surveyForm) surveyForm.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
         toast("You're in — good luck!");
       });
     }
@@ -2477,8 +2608,8 @@
       const players = playerArray();
       document.getElementById("admin-count").textContent = players.length;
       list.innerHTML = "";
-      if (!players.length) { list.innerHTML = '<div class="empty">No players yet.</div>'; return; }
-      for (const { office, players: group } of groupByOffice(players)) {
+      if (!players.length) { list.innerHTML = '<div class="empty">No players yet.</div>'; }
+      else for (const { office, players: group } of groupByOffice(players)) {
         const section = document.createElement("div");
         section.className = "office-group";
         section.innerHTML = `<div class="office-head"><span>${escapeHtml(office)}</span><span class="office-count">${group.length}</span></div>`;
@@ -2495,6 +2626,88 @@
         }
         list.appendChild(section);
       }
+      renderSurveyStats();
+    }
+
+    // Sign-up survey: tally answers per question, overall and per-office.
+    // Each option is A/B/C; missing = ignored (treated as 'not answered').
+    // Read raw player records (not playerArray) so commitment/compete
+    // fields survive — playerArray() projects to a smaller shape.
+    function renderSurveyStats() {
+      const mount = document.getElementById("survey-stats");
+      if (!mount) return;
+      const players = Object.values(state.players || {});
+      if (!players.length) {
+        mount.innerHTML = `<div class="survey-stat-empty">No sign-ups yet.</div>`;
+        return;
+      }
+      const SURVEY_QS = [
+        { key: "commitment", title: "Our league has limited spots — how committed are you?",
+          opts: { A: "Very!", B: "Flexible", C: "Backup" } },
+        { key: "compete", title: "Will you play a competitive sub-match for your entry?",
+          opts: { A: "Definitely", B: "If time allows", C: "Lottery only" } },
+      ];
+      // Aggregate counts: byQ[key][office][option] and byQ[key].total[option]
+      function tally(qKey) {
+        const result = { total: { A: 0, B: 0, C: 0, _answered: 0, _all: players.length } };
+        for (const o of OFFICES) result[o] = { A: 0, B: 0, C: 0, _answered: 0, _all: 0 };
+        for (const p of players) {
+          if (p.office && result[p.office]) result[p.office]._all++;
+          const v = p[qKey];
+          if (v === "A" || v === "B" || v === "C") {
+            result.total[v]++;
+            result.total._answered++;
+            if (p.office && result[p.office]) {
+              result[p.office][v]++;
+              result[p.office]._answered++;
+            }
+          }
+        }
+        return result;
+      }
+      function bar(counts, opts) {
+        const ans = counts._answered;
+        if (!ans) return `<div class="survey-stat-bar"><div class="seg seg-x" style="width:100%">No answers</div></div>`;
+        const a = counts.A, b = counts.B, c = counts.C;
+        const segs = [];
+        const aw = (a / ans) * 100, bw = (b / ans) * 100, cw = (c / ans) * 100;
+        if (a) segs.push(`<div class="seg seg-A" title="${escapeHtml(opts.A)}: ${a}" style="width:${aw.toFixed(2)}%">${a}</div>`);
+        if (b) segs.push(`<div class="seg seg-B" title="${escapeHtml(opts.B)}: ${b}" style="width:${bw.toFixed(2)}%">${b}</div>`);
+        if (c) segs.push(`<div class="seg seg-C" title="${escapeHtml(opts.C)}: ${c}" style="width:${cw.toFixed(2)}%">${c}</div>`);
+        return `<div class="survey-stat-bar">${segs.join("")}</div>`;
+      }
+      function legend(opts) {
+        return `<div class="survey-stat-legend">
+          <span><span class="dot seg-A"></span>A · ${escapeHtml(opts.A)}</span>
+          <span><span class="dot seg-B"></span>B · ${escapeHtml(opts.B)}</span>
+          <span><span class="dot seg-C"></span>C · ${escapeHtml(opts.C)}</span>
+        </div>`;
+      }
+      mount.innerHTML = `<div class="survey-stats">` + SURVEY_QS.map(q => {
+        const t = tally(q.key);
+        const overall = `
+          <div class="survey-stat-row overall">
+            <div class="survey-stat-label">Overall</div>
+            ${bar(t.total, q.opts)}
+            <div class="survey-stat-count">${t.total._answered}/${t.total._all}</div>
+          </div>`;
+        const officeRows = OFFICES.map(o => {
+          const oc = t[o];
+          return `
+            <div class="survey-stat-row">
+              <div class="survey-stat-label">${escapeHtml(o)}</div>
+              ${bar(oc, q.opts)}
+              <div class="survey-stat-count">${oc._answered}/${oc._all}</div>
+            </div>`;
+        }).join("");
+        return `
+          <div class="survey-stat-block">
+            <div class="survey-stat-title">${escapeHtml(q.title)}</div>
+            <div class="survey-stat-overall">${overall}</div>
+            <div class="survey-stat-byoffice">${officeRows}</div>
+            ${legend(q.opts)}
+          </div>`;
+      }).join("") + `</div>`;
     }
 
     function renderLeagues() {
