@@ -908,21 +908,37 @@
     letter-spacing: 0.04em;
   }
   .gm-row-body {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 8px;
   }
   .gm-label {
     font-size: 9px; font-weight: 700;
     color: rgba(255,255,255,0.45);
     text-transform: uppercase; letter-spacing: 0.18em;
+    flex: 0 0 auto;
   }
   .gm-value {
     flex: 1;
+    min-width: 0;
     font-size: 13px;
     color: rgba(255,255,255,0.92);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .gm-value.empty { color: rgba(255,255,255,0.4); font-style: italic; }
-  .gm-input {
+  .gm-avatar-slot { flex: 0 0 auto; display: inline-flex; }
+  .avatar.gm-placeholder {
+    color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.03);
+    border-style: dashed;
+    font-size: 16px;
+    font-weight: 300;
+  }
+  .gm-input-wrap {
+    position: relative;
     flex: 1;
+    min-width: 0;
+  }
+  .gm-input {
+    width: 100%;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.2);
     border-radius: 8px;
@@ -2023,7 +2039,6 @@
       key,
       name: PEOPLE_NAMES[key]
     }));
-    let suggestActive = -1;
 
     function highlightMatch(name, q) {
       if (!q) return escapeHtml(name);
@@ -2033,58 +2048,75 @@
         return safeName.replace(new RegExp("(" + safeQ + ")", "i"), "<mark>$1</mark>");
       } catch { return safeName; }
     }
-    function renderSuggestions() {
-      const raw = (nameInput.value || "").trim();
-      const norm = normalizeName(raw);
-      if (!norm) { suggestBox.hidden = true; suggestBox.innerHTML = ""; suggestActive = -1; return; }
-      const taken = new Set(playerArray().map(p => normalizeName(p.name)));
-      const tokens = norm.split(/\s+/).filter(Boolean);
-      const matches = PEOPLE_LIST.filter(p => {
-        if (taken.has(p.key)) return false;
-        return tokens.every(t => p.key.includes(t));
-      }).slice(0, 8);
-      if (!matches.length) { suggestBox.hidden = true; suggestBox.innerHTML = ""; suggestActive = -1; return; }
-      suggestBox.innerHTML = matches.map((p, i) =>
-        `<button type="button" class="suggest-row${i === suggestActive ? " active" : ""}" data-name="${escapeHtml(p.name)}">${avatarHtml(p.name, "sm")}<span class="nm">${highlightMatch(p.name, raw)}</span></button>`
-      ).join("");
-      suggestBox.hidden = false;
-    }
-    function pickSuggestion(name) {
-      nameInput.value = name;
-      suggestBox.hidden = true;
-      suggestBox.innerHTML = "";
-      suggestActive = -1;
-      officeSel.focus();
-    }
-    nameInput.addEventListener("input", renderSuggestions);
-    nameInput.addEventListener("focus", renderSuggestions);
-    nameInput.addEventListener("blur", () => setTimeout(() => { suggestBox.hidden = true; }, 150));
-    nameInput.addEventListener("keydown", e => {
-      const rows = Array.from(suggestBox.querySelectorAll(".suggest-row"));
-      if (e.key === "Enter") {
-        if (!suggestBox.hidden && suggestActive >= 0 && rows[suggestActive]) {
-          e.preventDefault();
-          pickSuggestion(rows[suggestActive].dataset.name);
-        } else {
-          signUp();
-        }
-      } else if (e.key === "ArrowDown" && !suggestBox.hidden && rows.length) {
-        e.preventDefault();
-        suggestActive = (suggestActive + 1) % rows.length;
-        rows.forEach((r, i) => r.classList.toggle("active", i === suggestActive));
-      } else if (e.key === "ArrowUp" && !suggestBox.hidden && rows.length) {
-        e.preventDefault();
-        suggestActive = (suggestActive - 1 + rows.length) % rows.length;
-        rows.forEach((r, i) => r.classList.toggle("active", i === suggestActive));
-      } else if (e.key === "Escape") {
-        suggestBox.hidden = true; suggestActive = -1;
+
+    // Reusable name-autocomplete: wires a text input + suggest-box pair to
+    // the Studio Gang people list. opts.exclude() returns a Set of name
+    // keys to hide; opts.onPick(name) fires when the user accepts a
+    // suggestion; opts.onEnter(e) fires on Enter when no suggestion is
+    // selected; opts.onEscape(e) fires on Esc.
+    function attachNameAutocomplete(input, suggestBox, opts) {
+      opts = opts || {};
+      let active = -1;
+      function render() {
+        const raw = (input.value || "").trim();
+        const norm = normalizeName(raw);
+        if (!norm) { suggestBox.hidden = true; suggestBox.innerHTML = ""; active = -1; return; }
+        const exclude = opts.exclude ? opts.exclude() : null;
+        const tokens = norm.split(/\s+/).filter(Boolean);
+        const matches = PEOPLE_LIST.filter(p => {
+          if (exclude && exclude.has(p.key)) return false;
+          return tokens.every(t => p.key.includes(t));
+        }).slice(0, 8);
+        if (!matches.length) { suggestBox.hidden = true; suggestBox.innerHTML = ""; active = -1; return; }
+        suggestBox.innerHTML = matches.map((p, i) =>
+          `<button type="button" class="suggest-row${i === active ? " active" : ""}" data-name="${escapeHtml(p.name)}">${avatarHtml(p.name, "sm")}<span class="nm">${highlightMatch(p.name, raw)}</span></button>`
+        ).join("");
+        suggestBox.hidden = false;
       }
-    });
-    suggestBox.addEventListener("mousedown", e => {
-      const btn = e.target.closest(".suggest-row");
-      if (!btn) return;
-      e.preventDefault();
-      pickSuggestion(btn.dataset.name);
+      function pick(name) {
+        input.value = name;
+        suggestBox.hidden = true;
+        suggestBox.innerHTML = "";
+        active = -1;
+        if (opts.onPick) opts.onPick(name);
+      }
+      input.addEventListener("input", render);
+      input.addEventListener("focus", render);
+      input.addEventListener("blur", () => setTimeout(() => { suggestBox.hidden = true; }, 150));
+      input.addEventListener("keydown", e => {
+        const rows = Array.from(suggestBox.querySelectorAll(".suggest-row"));
+        if (e.key === "Enter") {
+          if (!suggestBox.hidden && active >= 0 && rows[active]) {
+            e.preventDefault();
+            pick(rows[active].dataset.name);
+          } else if (opts.onEnter) {
+            opts.onEnter(e);
+          }
+        } else if (e.key === "ArrowDown" && !suggestBox.hidden && rows.length) {
+          e.preventDefault();
+          active = (active + 1) % rows.length;
+          rows.forEach((r, i) => r.classList.toggle("active", i === active));
+        } else if (e.key === "ArrowUp" && !suggestBox.hidden && rows.length) {
+          e.preventDefault();
+          active = (active - 1 + rows.length) % rows.length;
+          rows.forEach((r, i) => r.classList.toggle("active", i === active));
+        } else if (e.key === "Escape") {
+          suggestBox.hidden = true; active = -1;
+          if (opts.onEscape) opts.onEscape(e);
+        }
+      });
+      suggestBox.addEventListener("mousedown", e => {
+        const btn = e.target.closest(".suggest-row");
+        if (!btn) return;
+        e.preventDefault();
+        pick(btn.dataset.name);
+      });
+    }
+
+    attachNameAutocomplete(nameInput, suggestBox, {
+      exclude: () => new Set(playerArray().map(p => normalizeName(p.name))),
+      onPick: () => officeSel.focus(),
+      onEnter: () => signUp(),
     });
 
     function signUp() {
@@ -2403,16 +2435,31 @@
       const gms = state.gamemasters || {};
       const rows = OFFICES.map(office => {
         const name = gms[office] || "";
-        const body = adminUnlocked
-          ? `<span class="gm-label">GM</span>
-             <input class="gm-input" type="text" maxlength="60" autocomplete="off" spellcheck="false"
-                    data-office="${escapeHtml(office)}"
-                    value="${escapeHtml(name)}"
-                    placeholder="Add a gamemaster">`
-          : `<span class="gm-label">GM</span>
-             ${ name
-                ? `<span class="gm-value">${escapeHtml(name)}</span>`
-                : `<span class="gm-value empty">Not set</span>` }`;
+        let body;
+        if (adminUnlocked) {
+          const avatar = name
+            ? avatarHtml(name, "sm")
+            : `<div class="avatar sm gm-placeholder">+</div>`;
+          body = `
+            <span class="gm-label">GM</span>
+            <span class="gm-avatar-slot">${avatar}</span>
+            <div class="gm-input-wrap">
+              <input class="gm-input" type="text" maxlength="60" autocomplete="off" spellcheck="false"
+                     data-office="${escapeHtml(office)}"
+                     value="${escapeHtml(name)}"
+                     placeholder="Search a Studio Gang person…">
+              <div class="suggest gm-suggest" hidden></div>
+            </div>`;
+        } else if (name) {
+          body = `
+            <span class="gm-label">GM</span>
+            ${avatarHtml(name, "sm")}
+            <span class="gm-value">${escapeHtml(name)}</span>`;
+        } else {
+          body = `
+            <span class="gm-label">GM</span>
+            <span class="gm-value empty">Not set</span>`;
+        }
         return `
           <div class="gm-row">
             <div class="gm-row-head">${escapeHtml(office)}</div>
@@ -2421,21 +2468,36 @@
       }).join("");
       mount.innerHTML = `<div class="gm-grid">${rows}</div>`;
       if (!adminUnlocked) return;
-      mount.querySelectorAll(".gm-input").forEach(input => {
+
+      mount.querySelectorAll(".gm-row").forEach(row => {
+        const input = row.querySelector(".gm-input");
+        const suggestBox = row.querySelector(".gm-suggest");
+        const avatarSlot = row.querySelector(".gm-avatar-slot");
+        if (!input || !suggestBox) return;
+        const office = input.dataset.office;
         const original = input.value;
+        let lastSaved = original;
         const save = () => {
-          const office = input.dataset.office;
           const next = input.value.trim();
-          if (next === original.trim()) return;
+          if (next === lastSaved.trim()) return;
+          lastSaved = next;
+          // Reflect the pick in the avatar immediately; the Firebase
+          // listener will rerender soon, but this hides the round-trip.
+          if (avatarSlot) {
+            avatarSlot.innerHTML = next
+              ? avatarHtml(next, "sm")
+              : `<div class="avatar sm gm-placeholder">+</div>`;
+          }
           const ref = db.ref(`gamemasters/${office}`);
           (next ? ref.set(next) : ref.remove())
-            .then(() => toast(next ? `${office} gamemaster saved` : `${office} gamemaster cleared`))
+            .then(() => toast(next ? `${office} gamemaster: ${next}` : `${office} gamemaster cleared`))
             .catch(() => toast("Couldn't save gamemaster", true));
         };
         input.addEventListener("blur", save);
-        input.addEventListener("keydown", e => {
-          if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-          else if (e.key === "Escape") { input.value = original; input.blur(); }
+        attachNameAutocomplete(input, suggestBox, {
+          onPick: () => input.blur(),
+          onEnter: () => input.blur(),
+          onEscape: () => { input.value = original; input.blur(); },
         });
       });
     }
