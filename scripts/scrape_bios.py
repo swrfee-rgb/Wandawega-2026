@@ -2,17 +2,17 @@
 """
 Scrape every Studio Gang staffer's bio from studiogang.com.
 
-Writes a single file `bios.json` next to itself, mapping display
-name -> { role, bio }. The bio is the visible text from each
-person's /people/<slug>/ page, stripped of HTML and capped at
-1500 characters so the result stays paste-friendly.
+Writes `bios.json` to your Desktop, mapping display name ->
+{ role, bio }. The bio is the visible text from each person's
+/people/<slug>/ page, stripped of HTML and capped at 1500
+characters so the result stays paste-friendly.
 
 Run locally — the Wandawega sandbox can't reach studiogang.com.
 
     python3 scrape_bios.py
 
-That's it. No `>` redirection needed. Look for bios.json in the
-same folder when it finishes (~1 minute for ~127 people).
+That's it. No `>` redirection needed. Look for bios.json on your
+Desktop when it finishes (~1 minute for ~127 people).
 
 Requires Python 3.7+, standard library only.
 """
@@ -31,7 +31,22 @@ UA = (
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15"
 )
 MAX_BIO_CHARS = 1500
-OUT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bios.json")
+
+
+def _desktop_dir():
+    """Return ~/Desktop if it exists, otherwise the user's home dir."""
+    home = os.path.expanduser("~")
+    desktop = os.path.join(home, "Desktop")
+    if os.path.isdir(desktop):
+        return desktop
+    # Some locales / OneDrive setups use a different folder name.
+    onedrive_desktop = os.path.join(home, "OneDrive", "Desktop")
+    if os.path.isdir(onedrive_desktop):
+        return onedrive_desktop
+    return home
+
+
+OUT_FILE = os.path.join(_desktop_dir(), "bios.json")
 
 
 def fetch(url, retries=3):
