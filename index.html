@@ -1265,6 +1265,18 @@
     line-height: 1.5; margin-top: 10px;
   }
 
+  /* Admin "Testing" panel: count input + seed button on one row */
+  .seed-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .seed-row label { color: var(--muted); font-size: 14px; }
+  .seed-row input[type="number"] {
+    width: 5em; padding: 8px 10px; font-size: 15px;
+    background: rgba(255,255,255,0.05);
+    color: var(--ink); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; text-align: center;
+  }
+
   /* SIGN-UP SURVEY (radio-card questions on the sign-up form) */
   .survey {
     appearance: none; border: 0;
@@ -1523,6 +1535,16 @@
         <h2>Players (<span id="admin-count">0</span>)</h2>
         <div id="admin-list" class="player-list"></div>
         <button class="danger mt" id="admin-clear">Clear all players</button>
+      </div>
+
+      <div class="panel">
+        <h2>Testing</h2>
+        <div class="seed-row">
+          <label for="seed-count">Total signups:</label>
+          <input id="seed-count" type="number" min="2" max="127" value="20">
+          <button class="secondary" id="admin-seed">Seed fake players</button>
+        </div>
+        <div class="help">Replaces all existing players with N random fake signups (real Studio Gang names, correct offices, random survey answers). Useful for previewing the list, leagues, and bracket layout before real sign-ups roll in.</div>
       </div>
 
       <div class="panel">
@@ -2811,6 +2833,38 @@
     document.getElementById("admin-clear").addEventListener("click", () => {
       if (!confirm("Remove ALL signed-up players? This can't be undone.")) return;
       db.ref("players").remove().then(() => toast("Players cleared"));
+    });
+    document.getElementById("admin-seed").addEventListener("click", () => {
+      const input = document.getElementById("seed-count");
+      const maxN = Object.keys(PEOPLE_NAMES).length;
+      const n = Math.max(2, Math.min(maxN, parseInt(input.value, 10) || 0));
+      input.value = n;
+      if (!confirm(`Replace all players with ${n} random fake signups?`)) return;
+      const keys = Object.keys(PEOPLE_NAMES);
+      for (let i = keys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [keys[i], keys[j]] = [keys[j], keys[i]];
+      }
+      const ABC = ["A", "B", "C"];
+      const pickABC = () => ABC[Math.floor(Math.random() * 3)];
+      const players = {};
+      const learned = {};
+      const now = Date.now();
+      for (let i = 0; i < n; i++) {
+        const key = keys[i];
+        const id = "p_seed_" + now.toString(36) + "_" + i.toString(36);
+        const office = PEOPLE_OFFICES[key] || "Chicago";
+        const rec = { name: PEOPLE_NAMES[key], office, addedAt: firebase.database.ServerValue.TIMESTAMP };
+        if (Math.random() < 0.85) rec.commitment = pickABC();
+        if (Math.random() < 0.85) rec.compete = pickABC();
+        players[id] = rec;
+        learned[key] = office;
+      }
+      Promise.all([
+        db.ref("players").set(players),
+        db.ref("name_offices").update(learned),
+      ]).then(() => toast(`Seeded ${n} fake players`))
+        .catch(() => toast("Seed failed", true));
     });
     document.getElementById("admin-savepass").addEventListener("click", () => {
       const v = document.getElementById("admin-newpass").value.trim();
