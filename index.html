@@ -1520,7 +1520,7 @@
       <h2>Admin</h2>
       <input id="admin-pass" type="password" placeholder="Passcode" autocomplete="off">
       <button class="primary mt" id="admin-unlock">Unlock</button>
-      <div class="help">Default passcode is <code>pingpong2026</code>. Change it in Settings once unlocked.</div>
+      <div class="help">Set <code>settings/passcode</code> in the Firebase database to enable this panel. After unlocking once, you can rotate it from the Settings tab.</div>
     </div>
 
     <div id="admin-panel" hidden>
@@ -1812,7 +1812,12 @@
   };
   // FIREBASE_CONFIG_END
 
-  const DEFAULT_PASSCODE = "pingpong2026";
+  // No default passcode: admin unlock requires settings/passcode to be set
+  // in the Firebase database out-of-band. With this null, the strict-equality
+  // check in the unlock handler (v === state.passcode) cannot match any
+  // string the user types, so no input opens the panel until the owner
+  // configures one.
+  const DEFAULT_PASSCODE = null;
   const OFFICES = ["Chicago", "San Francisco", "New York", "Paris"];
   const OFFICE_ABBREV = {
     "Chicago": "Chicago",
