@@ -777,14 +777,12 @@
     position: fixed;
     top: 0; left: 0; right: 0;
     height: 30px;
-    background: rgba(0, 0, 0, 0.78);
-    border-bottom: 1px solid rgba(255,255,255,0.15);
+    background: transparent;
     overflow: hidden;
     z-index: 1000;
     display: flex;
     align-items: center;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    pointer-events: none;
   }
   .top-banner__track {
     display: flex;
@@ -799,13 +797,15 @@
     letter-spacing: 0.04em;
     padding: 0 36px 0 12px;
     flex: 0 0 auto;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.65), 0 0 1px rgba(0,0,0,0.85);
   }
   .top-banner__msg strong { font-weight: 700; }
   .top-banner__sep {
-    color: rgba(255,255,255,0.55);
+    color: rgba(255,255,255,0.7);
     padding: 0 36px 0 0;
     flex: 0 0 auto;
     font-size: 13px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.65);
   }
   @keyframes tb-scroll {
     from { transform: translate3d(0, 0, 0); }
@@ -1568,13 +1568,13 @@
 
 <div class="top-banner" role="status" aria-live="polite">
   <div class="top-banner__track" aria-hidden="false">
-    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__msg">Sign-up close <strong>June 16, 2026</strong> — Add your name and take the survey before it's too late!</span>
     <span class="top-banner__sep">•</span>
-    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__msg">Sign-up close <strong>June 16, 2026</strong> — Add your name and take the survey before it's too late!</span>
     <span class="top-banner__sep">•</span>
-    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__msg">Sign-up close <strong>June 16, 2026</strong> — Add your name and take the survey before it's too late!</span>
     <span class="top-banner__sep">•</span>
-    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__msg">Sign-up close <strong>June 16, 2026</strong> — Add your name and take the survey before it's too late!</span>
     <span class="top-banner__sep">•</span>
   </div>
 </div>
