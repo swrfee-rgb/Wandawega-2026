@@ -1850,6 +1850,8 @@
           <div class="rule-body">
             <p>Each office's share of its league's eight seats is proportional to how many of its people signed up.</p>
             <p class="rule-eg"><em>Example:</em> Chicago signs up 10 and San Francisco signs up 5. Their joint league of 8 fills with 5 from Chicago and 3 from San Francisco.</p>
+            <p>One exception: if an office only has a single sign-up, that person <em>always</em> gets a seat, no matter how small the percentage. We never round the last person out — they came to play.</p>
+            <p class="rule-eg"><em>Example:</em> Chicago signs up 14 and Paris signs up 1. Proportional rounding would push Paris out, but the lone Parisian is locked in — Chicago fills the other 7 seats.</p>
           </div>
         </details>
         <details class="rule">
@@ -2028,6 +2030,7 @@
           <summary>What if my office has more sign-ups than spots?</summary>
           <div class="faq-body">
             <p>Each office's share of its league's eight seats is proportional to how many people signed up. <em>Example:</em> Chicago signs up 10 and San Francisco signs up 5 — their joint league of eight fills with 5 from Chicago and 3 from SF.</p>
+            <p>One protection: if your office only has a single sign-up, that one person <em>always</em> gets a seat, regardless of percentages. Lone sign-ups are never rounded out — Chicago (or whichever big office shares the league) just gives up one seat to make room.</p>
             <p>If your office has more sign-ups than its quota, the office's <em>gamemaster</em> decides who plays — through an office-wide sub-match, a lottery, or any other method — and logs the final roster by <strong>July 28, 2026</strong> (the day before Camp Wandawega opens on July 29).</p>
           </div>
         </details>
@@ -3756,25 +3759,48 @@
   // Compute the per-office quota for a league using the Hamilton / largest-
   // remainder method so the proportional split always sums to exactly the
   // target (8 when sign-ups allow it; the league total otherwise).
+  //
+  // Override: any office with exactly one sign-up is guaranteed that one
+  // seat. The lone person is never rounded out, even if a much larger
+  // partner office would otherwise sweep the quota by fractional weight.
+  // The remaining seats are distributed proportionally among the
+  // non-lonely offices.
   function leagueQuotas(league, counts) {
     const offices = asArray(league.offices);
     const total = offices.reduce((s, o) => s + (counts[o] || 0), 0);
     const target = Math.min(8, total);
     if (target === 0) return offices.map(o => ({ office: o, quota: 0, count: 0 }));
-    const raw = offices.map(o => {
-      const cnt = counts[o] || 0;
-      const exact = (cnt / total) * target;
-      return { office: o, count: cnt, exact, floor: Math.floor(exact), frac: exact - Math.floor(exact) };
-    });
-    let allocated = raw.reduce((s, r) => s + r.floor, 0);
-    const sorted = [...raw].sort((a, b) => b.frac - a.frac || (b.count - b.floor) - (a.count - a.floor));
-    let i = 0;
-    while (allocated < target && i < sorted.length * 4) {
-      const r = sorted[i % sorted.length];
-      if (r.floor < r.count) { r.floor++; allocated++; }
-      i++;
+
+    const lonely = new Set(offices.filter(o => (counts[o] || 0) === 1));
+    const protectedSeats = Math.min(lonely.size, target);
+    const remainingTarget = target - protectedSeats;
+
+    const poolOffices = offices.filter(o => !lonely.has(o) && (counts[o] || 0) > 0);
+    const poolTotal = poolOffices.reduce((s, o) => s + counts[o], 0);
+
+    const poolQuota = new Map();
+    if (remainingTarget > 0 && poolTotal > 0) {
+      const raw = poolOffices.map(o => {
+        const cnt = counts[o];
+        const exact = (cnt / poolTotal) * remainingTarget;
+        return { office: o, count: cnt, floor: Math.floor(exact), frac: exact - Math.floor(exact) };
+      });
+      let allocated = raw.reduce((s, r) => s + r.floor, 0);
+      const sorted = [...raw].sort((a, b) => b.frac - a.frac || (b.count - b.floor) - (a.count - a.floor));
+      let i = 0;
+      while (allocated < remainingTarget && i < sorted.length * 4) {
+        const r = sorted[i % sorted.length];
+        if (r.floor < r.count) { r.floor++; allocated++; }
+        i++;
+      }
+      raw.forEach(r => poolQuota.set(r.office, r.floor));
     }
-    return raw.map(r => ({ office: r.office, quota: r.floor, count: r.count }));
+
+    return offices.map(o => ({
+      office: o,
+      quota: lonely.has(o) ? 1 : (poolQuota.get(o) || 0),
+      count: counts[o] || 0,
+    }));
   }
 
   function rosterIdsForOffice(league, office) {
