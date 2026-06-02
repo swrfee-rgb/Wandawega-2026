@@ -770,11 +770,57 @@
   }
   .rule-eg em { color: var(--cyan); font-style: normal; font-weight: 600; letter-spacing: 0.04em; }
 
+  /* TOP MARQUEE BANNER — fixed sign-up close-date ticker at the very
+     top of every page. Two copies of the message are duplicated in the
+     track so a -50% translation animates a seamless loop. */
+  .top-banner {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.78);
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    overflow: hidden;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .top-banner__track {
+    display: flex;
+    white-space: nowrap;
+    animation: tb-scroll 38s linear infinite;
+    will-change: transform;
+  }
+  .top-banner__msg {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 0 36px 0 12px;
+    flex: 0 0 auto;
+  }
+  .top-banner__msg strong { font-weight: 700; }
+  .top-banner__sep {
+    color: rgba(255,255,255,0.55);
+    padding: 0 36px 0 0;
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
+  @keyframes tb-scroll {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+  /* Push everything below the fixed banner */
+  body { padding-top: 30px; }
+
   /* RULE JOURNEY — single-color line-art step-by-step diagram at the
      top of each Rules panel. Each step is a small bordered card with
      a line-drawn SVG glyph, a 2-3 word title, and one short caption.
-     All glyphs render with currentColor so a single accent (cyan)
-     drives the whole diagram. Stacks vertically on phones. */
+     All glyphs render in white via currentColor so a single neutral
+     accent drives the whole diagram. Step badges are blue circles
+     that mirror the `.rule-num` chips used on each rule card below.
+     Stacks vertically on phones. */
   .rule-journey {
     display: flex;
     flex-wrap: nowrap;
@@ -782,43 +828,46 @@
     justify-content: center;
     gap: 0;
     margin: 4px 0 22px;
-    padding: 16px 8px;
+    padding: 18px 8px 16px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.10);
     border-radius: 14px;
     overflow-x: auto;
-    color: var(--cyan);
+    color: #fff;
   }
   .rj-step {
     flex: 1 1 0;
     min-width: 110px;
     max-width: 200px;
     background: transparent;
-    border: 1px solid rgba(42,214,238,0.30);
+    border: 1px solid rgba(255,255,255,0.20);
     border-radius: 12px;
-    padding: 14px 10px 12px;
+    padding: 18px 10px 12px;
     text-align: center;
     position: relative;
     display: flex; flex-direction: column;
     align-items: center; justify-content: flex-start;
   }
+  /* Step number badge — cyan circle matching .rule-num below */
   .rj-step::before {
     content: attr(data-step);
     position: absolute;
-    top: -10px; left: 50%; transform: translateX(-50%);
-    background: var(--navy);
-    color: var(--cyan);
-    border: 1px solid var(--cyan);
+    top: -14px; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 28px;
     border-radius: 999px;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.10em;
-    padding: 2px 8px;
-    line-height: 1.2;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    color: var(--cyan);
+    background: rgba(42, 214, 238, 0.12);
+    border: 1px solid rgba(42, 214, 238, 0.5);
+    text-shadow: 0 0 8px rgba(42, 214, 238, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
   .rj-step .rj-icon {
     height: 44px;
     display: flex; align-items: center; justify-content: center;
-    color: var(--cyan);
+    color: #fff;
     margin: 6px 0 10px;
   }
   .rj-step .rj-icon svg {
@@ -843,12 +892,11 @@
     line-height: 1.35;
   }
 
-  /* Single-line arrow connector between steps */
+  /* Single-line arrow connector between steps — white, low-key */
   .rj-arrow {
     flex: 0 0 30px;
     display: flex; align-items: center; justify-content: center;
-    color: var(--cyan);
-    opacity: 0.55;
+    color: rgba(255,255,255,0.5);
   }
   .rj-arrow svg {
     width: 26px; height: 12px;
@@ -861,9 +909,9 @@
 
   /* Phones: stack vertically, rotate the arrows down */
   @media (max-width: 760px) {
-    .rule-journey { flex-direction: column; padding: 14px 14px; gap: 0; }
-    .rj-step { width: 100%; max-width: 100%; min-width: 0; padding: 14px 12px; }
-    .rj-step::before { top: -10px; left: 50%; transform: translateX(-50%); }
+    .rule-journey { flex-direction: column; padding: 18px 14px 14px; gap: 0; }
+    .rj-step { width: 100%; max-width: 100%; min-width: 0; padding: 18px 12px 14px; }
+    .rj-step::before { top: -14px; left: 50%; transform: translateX(-50%); }
     .rj-arrow { flex: 0 0 24px; transform: rotate(90deg); margin: 4px 0; }
   }
 
@@ -1517,6 +1565,19 @@
 </style>
 </head>
 <body>
+
+<div class="top-banner" role="status" aria-live="polite">
+  <div class="top-banner__track" aria-hidden="false">
+    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__sep">•</span>
+    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__sep">•</span>
+    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__sep">•</span>
+    <span class="top-banner__msg">⏳ Sign-ups close <strong>June 16, 2026</strong> — add your name before then to play at Wandawega.</span>
+    <span class="top-banner__sep">•</span>
+  </div>
+</div>
 
 <div class="video-bg" aria-hidden="true">
   <video autoplay muted loop playsinline preload="auto" poster="hero.jpg?v=20250518f">
