@@ -1734,7 +1734,7 @@
       <h2>Pair Leagues</h2>
       <button class="primary" id="league-randomize">Randomize pairing</button>
       <button class="danger mt" id="league-clear">Clear pairing</button>
-      <div class="help">Randomly pairs the four offices into two leagues, with one guardrail: each league's combined sign-ups should be at least 8 (a full bracket). The randomizer enumerates the three possible pairings, keeps the ones that satisfy the rule on both sides, and picks at random among those. If no pairing reaches eight per side (too few total sign-ups), it falls back to the most balanced split. Once a pairing exists, the bracket only pairs teammates from within the same league, and every Round 1 match is drawn as one team from each league.</div>
+      <div class="help">Randomly pairs the four offices into two leagues under two guardrails. <strong>Hard rule:</strong> each league must join one big office (Chicago or New York) with one small office (San Francisco or Paris). That leaves exactly two legal pairings — Chicago + SF vs NY + Paris, or Chicago + Paris vs NY + SF. The third split (Chicago + NY together) is never picked. <strong>Soft rule:</strong> on top of that, each league's combined sign-ups should reach at least 8 so it can field a full bracket. The randomizer keeps whichever of the two legal pairings satisfies the soft rule and picks at random among them; if neither does, it falls back to the more balanced of the two. Once a pairing exists, the bracket only pairs teammates from within the same league, and every Round 1 match is drawn as one team from each league.</div>
     </div>
   </section>
 
@@ -1825,12 +1825,13 @@
         <details class="rule">
           <summary>
             <span class="rule-num">3</span>
-            <span class="rule-head">Each league needs at least 8 sign-ups.</span>
+            <span class="rule-head">1 big office + 1 small office = 1 league.</span>
           </summary>
           <div class="rule-body">
-            <p>The pairing is random, with one guardrail: each league's combined sign-ups should reach at least eight, so it can field a full bracket. When sign-ups close, the randomizer considers all three possible pairings of the four offices and picks at random among those where both sides have eight or more.</p>
-            <p class="rule-eg"><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. The valid pairing is <em>Chicago + San Francisco</em> (10) vs <em>New York + Paris</em> (8). The other splits leave one league short of eight, so the randomizer won't pick them.</p>
-            <p>If total sign-ups are below sixteen and no pairing can satisfy the rule, the randomizer falls back to the most balanced split.</p>
+            <p><strong>Hard rule:</strong> each league joins one of the big offices (Chicago or New York) with one of the small ones (San Francisco or Paris). That leaves exactly two legal pairings — <em>Chicago + SF vs NY + Paris</em>, or <em>Chicago + Paris vs NY + SF</em>. Putting the two big offices on the same side would force the two small offices to share the other side, making the leagues lopsided, so the randomizer never picks that arrangement. SF and Paris always sit in opposite leagues.</p>
+            <p><strong>Soft rule on top:</strong> each league's combined sign-ups should reach at least eight, so it can field a full bracket. The randomizer keeps whichever of the two legal pairings clears 8/8 and picks at random among them.</p>
+            <p class="rule-eg"><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. Both legal pairings are checked — Chicago + SF (10) vs NY + Paris (8) clears 8/8, Chicago + Paris (11) vs NY + SF (7) does not. So the randomizer picks the first.</p>
+            <p>If neither legal pairing clears 8/8 (total sign-ups too small), it falls back to whichever legal pairing is more balanced. The forbidden split is never used as a fallback.</p>
           </div>
         </details>
         <details class="rule">
@@ -2021,9 +2022,10 @@
         <details class="faq-item">
           <summary>How are the four offices paired into two leagues?</summary>
           <div class="faq-body">
-            <p>Once sign-ups close, the randomizer enumerates all three possible ways to split the four offices into two pairs, then picks at random among the pairings where each league has at least eight sign-ups (enough to field a full bracket).</p>
-            <p><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. Pairing Chicago with San Francisco (10) against New York with Paris (8) is the only split where both leagues clear eight, so it's the one the randomizer uses. The other two splits would leave one league short, so they're skipped.</p>
-            <p>If total sign-ups are below sixteen and no split can satisfy the rule, the randomizer falls back to the most balanced pairing (smallest gap between the two side-totals).</p>
+            <p>Two rules. <strong>First:</strong> every league must join one big office (Chicago or New York) with one small office (San Francisco or Paris). That leaves only two legal pairings — <em>Chicago + SF vs NY + Paris</em>, or <em>Chicago + Paris vs NY + SF</em>. The third split (Chicago + NY on the same side, SF + Paris on the other) is never used: it would leave the two small offices stuck together and the leagues lopsided. So SF and Paris always sit in opposite leagues.</p>
+            <p><strong>Second:</strong> on top of that, each league's combined sign-ups should reach at least eight. The randomizer keeps whichever of the two legal pairings satisfies this and picks at random among them.</p>
+            <p><em>Example:</em> Chicago 7, New York 4, San Francisco 3, Paris 4. Both legal pairings are scored — Chicago + SF (10) vs NY + Paris (8) clears 8/8, Chicago + Paris (11) vs NY + SF (7) does not. The randomizer picks the first.</p>
+            <p>If neither legal pairing clears 8/8, the randomizer falls back to whichever is more balanced. The forbidden Chicago + NY split is never used as a fallback.</p>
           </div>
         </details>
         <details class="faq-item">
@@ -3072,21 +3074,26 @@
 
     document.getElementById("league-randomize").addEventListener("click", () => {
       if (state.leagues && !confirm("Re-pair the leagues? This won't affect an existing bracket, but future regenerations will use the new pairing.")) return;
-      // Constraint: each league's combined sign-ups should be >= 8 so it
-      // can field a full bracket of 8 players. Generate all 3 ways to
-      // split 4 offices into 2 pairs, keep the ones that satisfy the
-      // >= 8 rule on both sides, and pick at random among those. If no
-      // pairing satisfies it (total sign-ups < 16 or a very skewed
-      // distribution), fall back to the most balanced pairing — the one
-      // with the smallest gap between the two side-totals.
+      // HARD constraint: each league must join one big office (Chicago
+      // or New York) with one small office (San Francisco or Paris).
+      // Pairing the two big offices together would force the two small
+      // offices to share the opposite league, which is the lopsided
+      // arrangement we explicitly want to avoid. Only 2 of the 3
+      // possible 4-office splits satisfy this, and the randomizer
+      // never considers the forbidden one.
+      //
+      // SOFT constraint on top: each league's combined sign-ups should
+      // reach >= 8 so it can field a full bracket. Filter the 2 legal
+      // pairings to those that satisfy this and pick at random among
+      // them. If neither reaches 8/8 (because total sign-ups are
+      // small), fall back to the more balanced of the two legal
+      // pairings — we never resort to the forbidden Chicago+NY split.
       const counts = {};
       OFFICES.forEach(o => counts[o] = 0);
       playerArray().forEach(p => { if (counts[p.office] != null) counts[p.office]++; });
-      const [a, b, c, d] = OFFICES;
       const pairings = [
-        [[a, b], [c, d]],
-        [[a, c], [b, d]],
-        [[a, d], [b, c]],
+        [["Chicago", "San Francisco"], ["New York", "Paris"]],
+        [["Chicago", "Paris"],         ["New York", "San Francisco"]],
       ];
       const score = (pair) => pair.reduce((s, o) => s + counts[o], 0);
       const annotated = pairings.map(p => ({
@@ -3099,7 +3106,6 @@
       if (valid.length) {
         chosen = fisherYates(valid)[0];
       } else {
-        // Fallback: minimize the gap between the two sides.
         const minGap = Math.min(...annotated.map(x => Math.abs(x.s1 - x.s2)));
         const ties = annotated.filter(x => Math.abs(x.s1 - x.s2) === minGap);
         chosen = fisherYates(ties)[0];
