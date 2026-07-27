@@ -1351,7 +1351,7 @@
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     text-shadow: 0 1px 6px rgba(0,0,0,0.5);
   }
-  /* Admin-only gender guess: bold colored stroke on the avatar */
+  /* Gender guess: bold colored stroke on the avatar */
   .avatar.g-m { border: 3px solid #2f9bf0; }
   .avatar.g-f { border: 3px solid #f46fb8; }
 
@@ -3079,7 +3079,7 @@
             : "";
           row.innerHTML = `
             <div class="player-info">
-              ${adminUnlocked ? genderAvatarHtml(p.name) : avatarHtml(p.name)}
+              ${genderAvatarHtml(p.name)}
               <div class="player-info-text">
                 <span class="player-name">${escapeHtml(p.name)}</span>
                 ${adminExtras}
@@ -3406,7 +3406,7 @@
               if (!p) continue;
               tiles.push(`
                 <div class="roster-final-tile">
-                  ${adminUnlocked ? genderAvatarHtml(p.name) : avatarHtml(p.name)}
+                  ${genderAvatarHtml(p.name)}
                   <span class="name">${escapeHtml(p.name)}</span>
                 </div>`);
             }
@@ -3509,7 +3509,7 @@
       const rows = OFFICES.map(office => {
         const name = gms[office] || "";
         const avatar = name
-          ? (adminUnlocked ? genderAvatarHtml(name) : avatarHtml(name))
+          ? genderAvatarHtml(name)
           : `<div class="avatar gm-placeholder">+</div>`;
         let content;
         if (adminUnlocked) {
@@ -3800,8 +3800,8 @@
     const first = normalizeName(name).split(" ")[0];
     return FIRST_NAME_GENDER[first] || null;
   }
-  // Avatar ringed with a bold gender-colored stroke (admin-only indicator).
-  // Unknown names get a plain avatar.
+  // Avatar ringed with a bold gender-colored stroke (best guess from the
+  // first name). Unknown names get a plain avatar.
   function genderAvatarHtml(name, sizeClass) {
     const g = guessGender(name);
     return avatarHtml(name, sizeClass, g ? "g-" + g.toLowerCase() : "");
@@ -3926,11 +3926,19 @@
 
   function generateBracket(players, leagues) {
     // 1. Randomly pair players into doubles teams.
-    //    If leagues are set, only pair within each league (no cross-league teams).
+    //    If leagues are set, only pair within each league (no cross-league
+    //    teams). On top of that, every female pairs with a male: shuffle
+    //    each gender pool and zip them F+M as long as both last. When one
+    //    pool runs out the leftovers (necessarily one gender) pair among
+    //    themselves at random — the rule is best-effort by construction.
     const allTeams = [];
     const teamsByLeague = { A: [], B: [] };
     const pairUp = (arr, leagueKey) => {
-      const sh = fisherYates(arr);
+      const fem = fisherYates(arr.filter(p => guessGender(p.name) === "F"));
+      const mal = fisherYates(arr.filter(p => guessGender(p.name) !== "F"));
+      const mixed = [];
+      while (fem.length && mal.length) mixed.push(fem.pop(), mal.pop());
+      const sh = mixed.concat(fisherYates(fem.concat(mal)));
       for (let i = 0; i + 1 < sh.length; i += 2) {
         const a = sh[i], b = sh[i + 1];
         const team = { ids: [a.id, b.id], names: [a.name, b.name] };
