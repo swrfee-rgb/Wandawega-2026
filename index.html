@@ -1171,6 +1171,7 @@
   .gm-input-wrap {
     position: relative;
     flex: 1; min-width: 0;
+    display: flex; align-items: center; gap: 6px;
   }
   .gm-input {
     width: 100%;
@@ -1351,13 +1352,17 @@
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     text-shadow: 0 1px 6px rgba(0,0,0,0.5);
   }
-  /* Admin-only gender guess icon shown inside the player-name pill */
+  /* Admin-only gender guess badge shown inside the player-name pill */
   .gender-icon {
-    font-size: 12px; font-weight: 700; margin-left: 6px;
-    text-shadow: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%;
+    font-size: 10px; font-weight: 700; line-height: 1;
+    color: #fff; margin-left: 6px; text-shadow: none;
+    vertical-align: -2px; flex: 0 0 auto;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.45);
   }
-  .gender-icon.gender-m { color: #6ec3ff; }
-  .gender-icon.gender-f { color: #ff9ad5; }
+  .gender-icon.gender-m { background: #2f9bf0; }
+  .gender-icon.gender-f { background: #f46fb8; }
 
   /* AVATAR */
   .avatar {
@@ -3523,6 +3528,7 @@
                      data-office="${escapeHtml(office)}"
                      value="${escapeHtml(name)}"
                      placeholder="Search a Studio Gang person…">
+              ${genderIconHtml(name)}
               <div class="suggest gm-suggest" hidden></div>
             </div>`;
         } else if (name) {
