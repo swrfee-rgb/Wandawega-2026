@@ -1351,6 +1351,13 @@
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     text-shadow: 0 1px 6px rgba(0,0,0,0.5);
   }
+  /* Admin-only gender guess icon shown inside the player-name pill */
+  .gender-icon {
+    font-size: 12px; font-weight: 700; margin-left: 6px;
+    text-shadow: none;
+  }
+  .gender-icon.gender-m { color: #6ec3ff; }
+  .gender-icon.gender-f { color: #ff9ad5; }
 
   /* AVATAR */
   .avatar {
@@ -2538,6 +2545,47 @@
     "zoe small": "New York",
   };
 
+  // Best-guess gender by first name ("M" / "F"), keyed by the normalized
+  // first token of the name. Covers everyone in PEOPLE_NAMES plus a few
+  // common walk-in names. First pass only — a wrong guess is cosmetic:
+  // the icon is admin-visible only and missing names simply show no icon.
+  const FIRST_NAME_GENDER = {
+    "aj": "M", "alan": "M", "alex": "M", "alfred": "M", "alissa": "F",
+    "amy": "F", "ana": "F", "andi": "F", "andrea": "F", "angela": "F",
+    "anika": "F", "anissa": "F", "anne-virginie": "F", "aria": "F",
+    "arthur": "M", "arty": "M", "aurelien": "M", "austin": "M",
+    "bella": "F", "bethany": "F", "bonny": "F", "brandon": "M",
+    "brian": "M", "bryan": "M", "caleb": "M", "cara": "F", "caroline": "F",
+    "carolyn": "F", "cassie": "F", "charles": "M", "chris": "M",
+    "claire": "F", "colleen": "F", "corbin": "M", "courtney": "F",
+    "danny": "M", "david": "M", "davis": "M", "diana": "F", "dylan": "M",
+    "efi": "F", "enrique": "M", "eric": "M", "evan": "M", "florencia": "F",
+    "francesca": "F", "gregg": "M", "haoxiang": "M", "jason": "M",
+    "jay": "M", "jeanne": "F", "jeff": "M", "jemma": "F", "jennifer": "F",
+    "jill": "F", "jing": "F", "joan": "M", "joe": "M", "john": "M",
+    "jonathan": "M", "josh": "M", "julcsi": "F", "julia": "F",
+    "juliane": "F", "julio": "M", "kariane": "F", "karina": "F",
+    "kristina": "F", "lara": "F", "laura": "F", "leia": "F", "liao": "M",
+    "lindsey": "F", "lingyi": "F", "liza": "F", "luis": "M", "lydia": "F",
+    "mae": "F", "magda": "F", "mark": "M", "marylynn": "F",
+    "mauricio": "M", "meghan": "F", "micheal": "M", "molly": "F",
+    "neha": "F", "ola": "F", "patricia": "F", "paul": "M", "philipp": "M",
+    "rhea": "F", "riley": "F", "rodia": "F", "sangwon": "M", "sarah": "F",
+    "schuyler": "M", "seanna": "F", "shunfan": "M", "shuping": "F",
+    "sok-man": "M", "steve": "M", "steven": "M", "teo": "M",
+    "terrence": "M", "thorsten": "M", "tim": "M", "todd": "M",
+    "tristan": "M", "vincent": "M", "violante": "F", "vitor": "M",
+    "weiju": "F", "wen": "M", "weston": "M", "will": "M", "william": "M",
+    "zandra": "F", "zihao": "M", "zoe": "F",
+    // Common walk-in names (non-directory sign-ups).
+    "hubert": "M", "james": "M", "michael": "M", "robert": "M",
+    "thomas": "M", "daniel": "M", "matthew": "M", "andrew": "M",
+    "peter": "M", "sam": "M", "ben": "M", "nick": "M", "alexander": "M",
+    "emily": "F", "emma": "F", "olivia": "F", "sophia": "F",
+    "isabella": "F", "mia": "F", "charlotte": "F", "amelia": "F",
+    "grace": "F", "hannah": "F", "natalie": "F", "rachel": "F",
+  };
+
   const configured = !FIREBASE_CONFIG.apiKey.startsWith("PASTE_");
   if (!configured) document.getElementById("config-warn").hidden = false;
 
@@ -3037,7 +3085,7 @@
             <div class="player-info">
               ${avatarHtml(p.name)}
               <div class="player-info-text">
-                <span class="player-name">${escapeHtml(p.name)}</span>
+                <span class="player-name">${escapeHtml(p.name)}${adminUnlocked ? genderIconHtml(p.name) : ""}</span>
                 ${adminExtras}
               </div>
             </div>`;
@@ -3228,7 +3276,7 @@
         for (const p of group) {
           const row = document.createElement("div");
           row.className = "player-row";
-          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
+          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}${genderIconHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
           row.querySelector("button").addEventListener("click", () => {
             if (state.bracket) return toast("Can't remove — reset bracket first.", true);
             if (!confirm(`Remove ${p.name}?`)) return;
@@ -3749,6 +3797,20 @@
     const url = findPhoto(name);
     if (!url) return `<div class="${cls}">${ini}</div>`;
     return `<div class="${cls}">${ini}<img src="${escapeHtml(url)}" alt="" onerror="this.remove()" loading="lazy"></div>`;
+  }
+
+  // Best-guess gender from the first name. Returns "M", "F", or null.
+  function guessGender(name) {
+    const first = normalizeName(name).split(" ")[0];
+    return FIRST_NAME_GENDER[first] || null;
+  }
+  // Admin-only icon shown next to player names; empty string when unknown.
+  function genderIconHtml(name) {
+    const g = guessGender(name);
+    if (!g) return "";
+    const icon = g === "F" ? "♀" : "♂";
+    const label = g === "F" ? "female" : "male";
+    return `<span class="gender-icon gender-${g.toLowerCase()}" title="Guessed ${label} (from first name)">${icon}</span>`;
   }
 
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
