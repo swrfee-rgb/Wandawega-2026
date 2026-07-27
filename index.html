@@ -3411,7 +3411,7 @@
               tiles.push(`
                 <div class="roster-final-tile">
                   ${avatarHtml(p.name)}
-                  <span class="name">${escapeHtml(p.name)}</span>
+                  <span class="name">${escapeHtml(p.name)}${adminUnlocked ? genderIconHtml(p.name) : ""}</span>
                 </div>`);
             }
           }
@@ -3452,7 +3452,7 @@
             return `
               <div class="${cls}" data-league="${key}" data-office="${escapeHtml(q.office)}" data-player="${escapeHtml(p.id)}" data-action="${disabled ? "none" : "toggle"}">
                 ${avatarHtml(p.name)}
-                <span>${escapeHtml(p.name)}</span>
+                <span>${escapeHtml(p.name)}${genderIconHtml(p.name)}</span>
               </div>`;
           }).join("");
           return `
