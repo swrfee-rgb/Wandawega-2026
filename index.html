@@ -1171,7 +1171,6 @@
   .gm-input-wrap {
     position: relative;
     flex: 1; min-width: 0;
-    display: flex; align-items: center; gap: 6px;
   }
   .gm-input {
     width: 100%;
@@ -1352,17 +1351,9 @@
     min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     text-shadow: 0 1px 6px rgba(0,0,0,0.5);
   }
-  /* Admin-only gender guess badge shown inside the player-name pill */
-  .gender-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 15px; height: 15px; border-radius: 50%;
-    font-size: 10px; font-weight: 700; line-height: 1;
-    color: #fff; margin-left: 6px; text-shadow: none;
-    vertical-align: -2px; flex: 0 0 auto;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.45);
-  }
-  .gender-icon.gender-m { background: #2f9bf0; }
-  .gender-icon.gender-f { background: #f46fb8; }
+  /* Admin-only gender guess: bold colored stroke on the avatar */
+  .avatar.g-m { border: 3px solid #2f9bf0; }
+  .avatar.g-f { border: 3px solid #f46fb8; }
 
   /* AVATAR */
   .avatar {
@@ -3088,9 +3079,9 @@
             : "";
           row.innerHTML = `
             <div class="player-info">
-              ${avatarHtml(p.name)}
+              ${adminUnlocked ? genderAvatarHtml(p.name) : avatarHtml(p.name)}
               <div class="player-info-text">
-                <span class="player-name">${escapeHtml(p.name)}${adminUnlocked ? genderIconHtml(p.name) : ""}</span>
+                <span class="player-name">${escapeHtml(p.name)}</span>
                 ${adminExtras}
               </div>
             </div>`;
@@ -3281,7 +3272,7 @@
         for (const p of group) {
           const row = document.createElement("div");
           row.className = "player-row";
-          row.innerHTML = `<div class="player-info">${avatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}${genderIconHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
+          row.innerHTML = `<div class="player-info">${genderAvatarHtml(p.name)}<span class="player-name">${escapeHtml(p.name)}</span></div><button class="x" title="Remove">×</button>`;
           row.querySelector("button").addEventListener("click", () => {
             if (state.bracket) return toast("Can't remove — reset bracket first.", true);
             if (!confirm(`Remove ${p.name}?`)) return;
@@ -3415,8 +3406,8 @@
               if (!p) continue;
               tiles.push(`
                 <div class="roster-final-tile">
-                  ${avatarHtml(p.name)}
-                  <span class="name">${escapeHtml(p.name)}${adminUnlocked ? genderIconHtml(p.name) : ""}</span>
+                  ${adminUnlocked ? genderAvatarHtml(p.name) : avatarHtml(p.name)}
+                  <span class="name">${escapeHtml(p.name)}</span>
                 </div>`);
             }
           }
@@ -3456,8 +3447,8 @@
             const cls = "roster-tile" + (isSel ? " selected" : "") + (disabled ? " disabled" : "");
             return `
               <div class="${cls}" data-league="${key}" data-office="${escapeHtml(q.office)}" data-player="${escapeHtml(p.id)}" data-action="${disabled ? "none" : "toggle"}">
-                ${avatarHtml(p.name)}
-                <span>${escapeHtml(p.name)}${genderIconHtml(p.name)}</span>
+                ${genderAvatarHtml(p.name)}
+                <span>${escapeHtml(p.name)}</span>
               </div>`;
           }).join("");
           return `
@@ -3518,7 +3509,7 @@
       const rows = OFFICES.map(office => {
         const name = gms[office] || "";
         const avatar = name
-          ? avatarHtml(name)
+          ? (adminUnlocked ? genderAvatarHtml(name) : avatarHtml(name))
           : `<div class="avatar gm-placeholder">+</div>`;
         let content;
         if (adminUnlocked) {
@@ -3528,7 +3519,6 @@
                      data-office="${escapeHtml(office)}"
                      value="${escapeHtml(name)}"
                      placeholder="Search a Studio Gang person…">
-              ${genderIconHtml(name)}
               <div class="suggest gm-suggest" hidden></div>
             </div>`;
         } else if (name) {
@@ -3562,7 +3552,7 @@
           // listener will rerender soon, but this hides the round-trip.
           if (avatarSlot) {
             avatarSlot.innerHTML = next
-              ? avatarHtml(next)
+              ? genderAvatarHtml(next)
               : `<div class="avatar gm-placeholder">+</div>`;
           }
           const ref = db.ref(`gamemasters/${office}`);
@@ -3797,8 +3787,8 @@
     const parts = (name || "").split(/\s+/).filter(Boolean);
     return (parts[0] ? parts[0][0] : "?").toUpperCase() + (parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() : "");
   }
-  function avatarHtml(name, sizeClass) {
-    const cls = "avatar" + (sizeClass ? " " + sizeClass : "");
+  function avatarHtml(name, sizeClass, extraCls) {
+    const cls = "avatar" + (sizeClass ? " " + sizeClass : "") + (extraCls ? " " + extraCls : "");
     const ini = escapeHtml(initials(name));
     const url = findPhoto(name);
     if (!url) return `<div class="${cls}">${ini}</div>`;
@@ -3810,13 +3800,11 @@
     const first = normalizeName(name).split(" ")[0];
     return FIRST_NAME_GENDER[first] || null;
   }
-  // Admin-only icon shown next to player names; empty string when unknown.
-  function genderIconHtml(name) {
+  // Avatar ringed with a bold gender-colored stroke (admin-only indicator).
+  // Unknown names get a plain avatar.
+  function genderAvatarHtml(name, sizeClass) {
     const g = guessGender(name);
-    if (!g) return "";
-    const icon = g === "F" ? "♀" : "♂";
-    const label = g === "F" ? "female" : "male";
-    return `<span class="gender-icon gender-${g.toLowerCase()}" title="Guessed ${label} (from first name)">${icon}</span>`;
+    return avatarHtml(name, sizeClass, g ? "g-" + g.toLowerCase() : "");
   }
 
   function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
